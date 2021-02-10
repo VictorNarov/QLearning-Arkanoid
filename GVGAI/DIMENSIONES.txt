@@ -1,0 +1,32 @@
+dimension mundo 240 x 360
+paso = +12 		-----------> 12 pix/paso / 240 pix * 10 col = 0.5 col / paso
+NUM FILAS = 15
+NUM COL = 10
+
+|        |
+       G  
+|        |
+          
+|        |
+          
+|        |
+ XXX  XXX 
+|        |
+          
+|        |
+          
+|        |
+ XXX  X X 
+|   XX O |
+POS ACTUAL = 14-7						
+POSICION REAL: 180.0 : 336.0			--> 14   - 7.5
+Objeto en 13-6 = 7 REAL: 144.0 : 324.0	--> 13.5 - 6
+Objeto en 13-8 = 7 REAL: 192.0 : 324.0  --> 13.5 - 8
+
+	public static double[] getCeldaPreciso(Vector2d vector, Dimension dim) {
+		
+    	double x = vector.x /  dim.getWidth() * Util.numCol;
+    	double y = vector.y /  dim.getHeight() * Util.numFilas;
+    	
+    	return new double[] {y,x};
+	}
