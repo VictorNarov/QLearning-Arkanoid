@@ -36,22 +36,10 @@ public class StateManager {
 	
 	/* Contenedor de constantes para identificar los estados */
 	public static enum ESTADOS {
-		OBTENGO_GASOLINA(0),
-		ESQUIVO_OBSTACULO(0),
-		MUERTE_SEGURA(0),
-		//GASOLINA_ARRIBA(0),
-		//GASOLINA_ABAJO(0),
-		GASOLINA_IZQDA(0),
-		GASOLINA_DCHA(0),
-		HUECO_ARRIBA(0),
-		//HUECO_ABAJO(0),
-		HUECO_IZQDA(0),
-		HUECO_DCHA(0),
-		//OBSTACULO_ARRIBA(0),
-		OBSTACULOS_IZQDA(0),
-		OBSTACULOS_DCHA(0),
-		BORDE_DCHA(0),
-		BORDE_IZQDA(0),
+		SIN_BOLA(0),
+		BOLA_IZQDA(0),
+		BOLA_DCHA(0),
+		BOLA_CENTRO(0),
 		NIL(0);
 
 		private int contador; //Cuenta cada vez que se percibe ese estado
@@ -77,7 +65,7 @@ public class StateManager {
 	}
 	
 	// Acciones posibles
-	public static final ACTIONS[] ACCIONES = {ACTIONS.ACTION_UP,ACTIONS.ACTION_DOWN, ACTIONS.ACTION_LEFT, ACTIONS.ACTION_RIGHT, ACTIONS.ACTION_NIL, ACTIONS.ACTION_USE};
+	public static final ACTIONS[] ACCIONES = {ACTIONS.ACTION_USE, ACTIONS.ACTION_LEFT, ACTIONS.ACTION_RIGHT, ACTIONS.ACTION_NIL};
 	
 	//Direcciones
 	private enum DIRECCIONES{ARRIBA, ABAJO, IZQDA, DCHA};
@@ -142,14 +130,10 @@ public class StateManager {
 			{
 				int valorR = 0;
 				
-				if(estado.equals(ESTADOS.OBTENGO_GASOLINA))
+				if(estado.equals(ESTADOS.BOLA_CENTRO))
 					valorR = 100;
 				
-				else if(estado.equals(ESTADOS.ESQUIVO_OBSTACULO))
-					valorR = 75;
-				
-				else if(estado.equals(ESTADOS.MUERTE_SEGURA))
-					valorR = -150;
+			
 				
 //				else if(estado.toString().contains("HUECO"))
 //				{
@@ -183,27 +167,19 @@ public class StateManager {
 				
 				R.put(new ParEstadoAccion(estado,accion), valorR);
 			}
-		// Castigamos el suicidio
-		R.put(new ParEstadoAccion(ESTADOS.BORDE_IZQDA,ACTIONS.ACTION_LEFT), -100);
-		R.put(new ParEstadoAccion(ESTADOS.BORDE_DCHA,ACTIONS.ACTION_RIGHT), -100);
-		R.put(new ParEstadoAccion(ESTADOS.OBSTACULOS_IZQDA,ACTIONS.ACTION_LEFT), -100);
-		R.put(new ParEstadoAccion(ESTADOS.OBSTACULOS_DCHA,ACTIONS.ACTION_RIGHT), -100);
-		//R.put(new ParEstadoAccion(ESTADOS.OBSTACULO_ARRIBA,ACTIONS.ACTION_UP), -100);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_ARRIBA,ACTIONS.ACTION_UP), -50);
-		R.put(new ParEstadoAccion(ESTADOS.ESQUIVO_OBSTACULO,ACTIONS.ACTION_UP), -50);
+		// Castigamos no ir hacia la bola
+		R.put(new ParEstadoAccion(ESTADOS.BOLA_IZQDA,ACTIONS.ACTION_RIGHT), -100);
+		R.put(new ParEstadoAccion(ESTADOS.BOLA_DCHA,ACTIONS.ACTION_LEFT), -100);
 		
-		//R.put(new ParEstadoAccion(ESTADOS.HUECO_ABAJO,ACTIONS.ACTION_DOWN), 100);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_ARRIBA,ACTIONS.ACTION_NIL), 100);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA,ACTIONS.ACTION_LEFT), 100);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA,ACTIONS.ACTION_RIGHT), 100);
+		// Premiamos ir hacia la bola
+		R.put(new ParEstadoAccion(ESTADOS.BOLA_IZQDA,ACTIONS.ACTION_LEFT), 75);
+		R.put(new ParEstadoAccion(ESTADOS.BOLA_DCHA,ACTIONS.ACTION_RIGHT), 75);
 		
-		//R.put(new ParEstadoAccion(ESTADOS.GASOLINA_ABAJO,ACTIONS.ACTION_DOWN), 100);
-		//R.put(new ParEstadoAccion(ESTADOS.GASOLINA_ARRIBA,ACTIONS.ACTION_NIL), 100);
-		R.put(new ParEstadoAccion(ESTADOS.GASOLINA_IZQDA,ACTIONS.ACTION_LEFT), 100);
-		R.put(new ParEstadoAccion(ESTADOS.GASOLINA_DCHA,ACTIONS.ACTION_RIGHT), 100);
+		// Premiamos iniciar el juego
+		R.put(new ParEstadoAccion(ESTADOS.SIN_BOLA,ACTIONS.ACTION_USE), 200);
 		
-		R.put(new ParEstadoAccion(ESTADOS.NIL,ACTIONS.ACTION_NIL), 1000);
-		R.put(new ParEstadoAccion(ESTADOS.ESQUIVO_OBSTACULO,ACTIONS.ACTION_DOWN), 100);
+		// Premiamos que se quede en el centro si la bola está alineada
+		R.put(new ParEstadoAccion(ESTADOS.BOLA_CENTRO,ACTIONS.ACTION_NIL), 200);
 	}
 	
 	/*
@@ -379,225 +355,149 @@ public class StateManager {
 	
 	public static ESTADOS getEstado(StateObservation obs, int vidaAnterior, char[][] mapaObstaculos)
 	{
-		int vidaActual = obs.getAvatarHealthPoints();
+		//int vidaActual = obs.getAvatarHealthPoints();
 		double [] pos = getCeldaPreciso(obs.getAvatarPosition(), obs.getWorldDimension()); 
 		posActual = getIndiceMapa(pos);
 		
 		if (verbose) System.out.println("POS ACTUAL = " + pos[0]+"-"+pos[1]);
 		if(verbose) System.out.println("POSICION REAL: " + obs.getAvatarPosition().toString());		
 		
-		int distanciaVisionHuecos = 3;
-		HashSet<Integer> huecosProximos = getHuecosFila(posActual,distanciaVisionHuecos,mapaObstaculos);
-		if(verbose) System.out.println("HUECOS DIST "+ distanciaVisionHuecos+ ": " + huecosProximos.toString());
 		
-	
-	   // ESTADOS DE MUERTE		
-		if(obs.isGameOver() || posActual[0]<0 && posActual[1]<0 || estoyRodeadoObstaculos(mapaObstaculos))
-			return ESTADOS.MUERTE_SEGURA; // "MUERTE SEGURA"
-		
-		if(posActual[1] <= 2)
-			return ESTADOS.BORDE_IZQDA;
-		
-		if(posActual[1] >= numCol*2-4)
-			return ESTADOS.BORDE_DCHA;
-		
-		if(!hayObstaculosDireccion(pos, DIRECCIONES.ARRIBA, 1.0, mapaObstaculos) &&
-				!hayObstaculosDireccion(pos, DIRECCIONES.IZQDA, 0.5, mapaObstaculos) && 
-				!hayObstaculosDireccion(pos, DIRECCIONES.DCHA, 0.5, mapaObstaculos) &&
-				(hayObstaculosDireccion(pos, DIRECCIONES.IZQDA, 2, mapaObstaculos) ||
-				hayObstaculosDireccion(pos, DIRECCIONES.DCHA, 2, mapaObstaculos)))
-			return ESTADOS.ESQUIVO_OBSTACULO;
-		
-		// Si se acerca el pasillo para sobrevivir
-		if(huecosProximos.size() > 0)
-			return getEstadoHueco(huecosProximos, posActual);
-		
-		if(posActual[0] > 0 && posActual[1] > 0) {
-			//mapaObstaculos = Util.getMapaObstaculos(obs);
-			
-			if(vidaActual > vidaAnterior)
-				return ESTADOS.OBTENGO_GASOLINA;// "+GASOLINA"
-				
-			int[] numObstaculosFila = getObstaculosFila(mapaObstaculos);
-			int numObstaculosIzqda = numObstaculosFila[0];
-			int numObstaculosDcha = numObstaculosFila[1];
-			
-			if (verbose) System.out.println("N obstaculos izqda = " + numObstaculosIzqda);
-			if (verbose) System.out.println("N obstaculos dcha = " + numObstaculosDcha);
-			
-
-/*						
-			// Percibimos los huecos
-			if(posActual[0]-2 > 0) {
-
-				if(mapaObstaculos[posActual[0]-1][posActual[1]] == ' ' && mapaObstaculos[posActual[0]-2][posActual[1]] == ' ')
-					return ESTADOS.HUECO_ARRIBA;
-			}
-			
-			if(posActual[0]+1 < numFilas) {
-				if(mapaObstaculos[posActual[0]+1][posActual[1]] == ' ')
-					return ESTADOS.HUECO_ABAJO;
-			}
-			
-			if(posActual[1]-1 > 0) {
-				
-				if(mapaObstaculos[posActual[0]][posActual[1]-1] == ' ')
-					return ESTADOS.HUECO_IZQDA;
-				
-			}
-			
-			if(posActual[0]+1 < numCol) {
-			
-				if(mapaObstaculos[posActual[0]][posActual[1]+1] == ' ')
-					return ESTADOS.HUECO_DCHA;
-			}
-			
-*/
-			if(hayObstaculosDireccion(pos, DIRECCIONES.IZQDA, 2.0, mapaObstaculos))
-				return ESTADOS.OBSTACULOS_IZQDA;
-			
-			if(hayObstaculosDireccion(pos, DIRECCIONES.DCHA, 2.0, mapaObstaculos))
-				return ESTADOS.OBSTACULOS_DCHA;
-			
-			int[] posGasolina = getPosGasolina(mapaObstaculos);
-			
-			if (verbose) System.out.println("POS GASOLINA: " + posGasolina[0] + "-" + posGasolina[1]);
-			
-			// SI TENGO CAPACIDAD PARA REPOSTAR Y SI HAY GASOLINA, ESTADO SEGUN LA POSICION DE LA GASOLINA
-			if(vidaActual < 11 && posGasolina[0] != -1 && posGasolina[1] != -1) { // SI HAY GASOLINA
-				ESTADOS estadoGasolina = getEstadoGasolina(posGasolina); // Obtiene el estado en funcion de la posicion de la gasolina
-				//if(!estadoGasolina.equals(ESTADOS.GASOLINA_ARRIBA))
-					return estadoGasolina;
-			}
-			
-			//if(hayObstaculosDireccion(pos, DIRECCIONES.ARRIBA, 3.0, mapaObstaculos))
-			//	return ESTADOS.OBSTACULO_ARRIBA;
-			
-/*			
-			if(numObstaculosDcha >= 1 && numObstaculosIzqda >= 1 || mapaObstaculos[posActual[0]-1][posActual[1]] == ' ' && mapaObstaculos[posActual[0]-2][posActual[1]] == ' ')
-				return ESTADOS.ESQUIVO_OBSTACULO; // ESQUIVO OBSTACULOS
-			
-			if(posActual[0]-1 > numFilas)	
-				if(mapaObstaculos[posActual[0]-1][posActual[1]] == 'X' || mapaObstaculos[posActual[0]-2][posActual[1]] == 'X' || mapaObstaculos[posActual[0]-3][posActual[1]] == 'X' || mapaObstaculos[posActual[0]-4][posActual[1]] == 'X')
-					return ESTADOS.OBSTACULO_ARRIBA;
-			
-			if(posActual[1]+1 < numCol)
-				if(mapaObstaculos[posActual[0]-1][posActual[1]+1] == 'X' || mapaObstaculos[posActual[0]][posActual[1]+1] == 'X')
-					return ESTADOS.OBSTACULOS_DCHA;
-			
-			if(posActual[1]-1 > 0)
-				if(mapaObstaculos[posActual[0]-1][posActual[1]-1] == 'X' || mapaObstaculos[posActual[0]][posActual[1]-1] == 'X')
-					return ESTADOS.OBSTACULOS_IZQDA;
-*/
-					
-		}
-		
-		return ESTADOS.NIL;
+		return getEstadoBola(mapaObstaculos);
 	}
 	
-	/*
-	 * Devuelve un array de dos enteros indicando el numero de obstaculos a la izqda y a la derecha del agente
-	 */
-	private static int[] getObstaculosFila(char[][] mapaObstaculos)
-	{	
-		int numObstaculosDcha = 0;
-		int numObstaculosIzqda = 0;
-				
-		//Desde la casilla a la derecha hasta el arbol de la derecha
-		for (int i = posActual[1]+1; i < numCol*2 -1; i++) {
-			// Si en la fila actual, columna i tenemos un obstaculo
-			//if (verbose) System.out.println("mirando casilla derecha: " + posActual[0]+"-"+i);
-			if(mapaObstaculos[posActual[0]][i] == 'X')
-				numObstaculosDcha++; //Incrementamos el contador
-		}
-		
-		//Desde la casilla a la izqda hasta el arbol de la izqda
-		for (int i = posActual[1]-1; i > 1; i--) {
-			// Si en la fila actual, columna i tenemos un obstaculo
-			if(mapaObstaculos[posActual[0]][i] == 'X')
-				numObstaculosIzqda++; //Incrementamos el contador
-		}
-		
-		
-		return new int[] {numObstaculosIzqda,numObstaculosDcha};
-		
-	}
-		
-	private static boolean estoyRodeadoObstaculos(char[][] mapaObstaculos)
+	private static ESTADOS getEstadoBola(char[][] mapaObstaculos)
 	{
-		// X X X ||   X 
-		//   O   || X O X
-		
-		boolean cond1=false, cond2=false, cond3=false, cond4=false, cond5=false, cond6=false, cond7=false;
-		
-		try {
-			cond1 = mapaObstaculos[posActual[0]-1][posActual[1]]=='X' || mapaObstaculos[posActual[0]-2][posActual[1]]=='X'; //arriba
-			
-			cond2 = mapaObstaculos[posActual[0]-1][posActual[1]+1]=='X' || mapaObstaculos[posActual[0]-1][posActual[1]+2]=='X'; //arriba derecha
-			cond3 = mapaObstaculos[posActual[0]-1][posActual[1]-1]=='X' || mapaObstaculos[posActual[0]-1][posActual[1]-2]=='X'; //arriba izqda
-			cond6 = mapaObstaculos[posActual[0]-2][posActual[1]+1]=='X' || mapaObstaculos[posActual[0]-2][posActual[1]+2]=='X'; //+arriba derecha
-			cond7 = mapaObstaculos[posActual[0]-2][posActual[1]-1]=='X' || mapaObstaculos[posActual[0]-2][posActual[1]-2]=='X'; //+arriba izqda
-			
-			cond4 = mapaObstaculos[posActual[0]][posActual[1]+1]=='X' || mapaObstaculos[posActual[0]][posActual[1]+2]=='X'; // derecha
-			cond5 = mapaObstaculos[posActual[0]][posActual[1]-1]=='X' || mapaObstaculos[posActual[0]][posActual[1]-2]=='X';	//izquierda
-			
-			
-			
-		} catch(Exception ex) {
-			//
-		}
-		
-		return(cond1 && ( (cond2 && cond3 || cond6 && cond7) || (cond4 && cond5) ));
-		
-		/*return(mapaObstaculos[posActual[0]-1][posActual[1]]=='X' 
-				&& ( (mapaObstaculos[posActual[0]-1][posActual[1]+1]=='X'
-					&& mapaObstaculos[posActual[0]-1][posActual[1]-1]=='X')
-				|| (mapaObstaculos[posActual[0]][posActual[1]-1]=='X'
-						&& mapaObstaculos[posActual[0]][posActual[1]-1]=='X') )
-				);*/
-		
-	}
-	
-	private static int[] getPosGasolina(char[][] mapaObstaculos)
-	{
-		int posGasolina[] = new int[] {-1,-1};
+		int posBola[] = new int[] {-1,-1};
 		boolean encontrado = false;
 
 			for(int i=0; i< numFilas*2-1; i++) {
-				for (int j = 2; j < numCol*2-2; j++)  //Quitando los arboles del borde
-					if(mapaObstaculos[i][j] == 'G') {
-						posGasolina = new int[]{i,j};
+				for (int j = 2; j < numCol*2-1; j++)  //Quitando los arboles del borde
+					if(mapaObstaculos[i][j] == 'X') {
+						posBola = new int[]{i,j};
 						encontrado = true;
 						break;
 					}
 				if(encontrado) break;
 			}
-
 		
-		return posGasolina;
+		if(encontrado)
+		{
+			if(posBola[1] == posActual[1])
+				return ESTADOS.BOLA_CENTRO;
+			else if(posBola[1] > posActual[1])
+				return ESTADOS.BOLA_DCHA;
+			else
+				return ESTADOS.BOLA_IZQDA;
+		}
+		else
+			return ESTADOS.SIN_BOLA;
+			
 	}
 	
-	private static ESTADOS getEstadoGasolina(int [] posGasolina)
-	{
-		
-		/* Misma columna y gasolina por encima */
-		//if(posGasolina[1] == posActual[1] && posGasolina[0] <= posActual[0]) 
-		//	return ESTADOS.GASOLINA_ARRIBA; 
-		
-		/* Gasolina a la derecha */
-		 if(posGasolina[1] > posActual[1])
-			return ESTADOS.GASOLINA_DCHA;
-		
-		/* Gasolina a la izqda */
-		else if(posGasolina[1] < posActual[1])
-			return ESTADOS.GASOLINA_IZQDA;
-		
-		/* Gasolina abajo */
-		//else if(posGasolina[0] > posActual[0])
-		//	return ESTADOS.GASOLINA_ABAJO;	
-		
-		return ESTADOS.NIL;
-	}
+	/*
+	 * Devuelve un array de dos enteros indicando el numero de obstaculos a la izqda y a la derecha del agente
+	 */
+//	private static int[] getObstaculosFila(char[][] mapaObstaculos)
+//	{	
+//		int numObstaculosDcha = 0;
+//		int numObstaculosIzqda = 0;
+//				
+//		//Desde la casilla a la derecha hasta el arbol de la derecha
+//		for (int i = posActual[1]+1; i < numCol*2 -1; i++) {
+//			// Si en la fila actual, columna i tenemos un obstaculo
+//			//if (verbose) System.out.println("mirando casilla derecha: " + posActual[0]+"-"+i);
+//			if(mapaObstaculos[posActual[0]][i] == 'X')
+//				numObstaculosDcha++; //Incrementamos el contador
+//		}
+//		
+//		//Desde la casilla a la izqda hasta el arbol de la izqda
+//		for (int i = posActual[1]-1; i > 1; i--) {
+//			// Si en la fila actual, columna i tenemos un obstaculo
+//			if(mapaObstaculos[posActual[0]][i] == 'X')
+//				numObstaculosIzqda++; //Incrementamos el contador
+//		}
+//		
+//		
+//		return new int[] {numObstaculosIzqda,numObstaculosDcha};
+//		
+//	}
+//		
+//	private static boolean estoyRodeadoObstaculos(char[][] mapaObstaculos)
+//	{
+//		// X X X ||   X 
+//		//   O   || X O X
+//		
+//		boolean cond1=false, cond2=false, cond3=false, cond4=false, cond5=false, cond6=false, cond7=false;
+//		
+//		try {
+//			cond1 = mapaObstaculos[posActual[0]-1][posActual[1]]=='X' || mapaObstaculos[posActual[0]-2][posActual[1]]=='X'; //arriba
+//			
+//			cond2 = mapaObstaculos[posActual[0]-1][posActual[1]+1]=='X' || mapaObstaculos[posActual[0]-1][posActual[1]+2]=='X'; //arriba derecha
+//			cond3 = mapaObstaculos[posActual[0]-1][posActual[1]-1]=='X' || mapaObstaculos[posActual[0]-1][posActual[1]-2]=='X'; //arriba izqda
+//			cond6 = mapaObstaculos[posActual[0]-2][posActual[1]+1]=='X' || mapaObstaculos[posActual[0]-2][posActual[1]+2]=='X'; //+arriba derecha
+//			cond7 = mapaObstaculos[posActual[0]-2][posActual[1]-1]=='X' || mapaObstaculos[posActual[0]-2][posActual[1]-2]=='X'; //+arriba izqda
+//			
+//			cond4 = mapaObstaculos[posActual[0]][posActual[1]+1]=='X' || mapaObstaculos[posActual[0]][posActual[1]+2]=='X'; // derecha
+//			cond5 = mapaObstaculos[posActual[0]][posActual[1]-1]=='X' || mapaObstaculos[posActual[0]][posActual[1]-2]=='X';	//izquierda
+//			
+//			
+//			
+//		} catch(Exception ex) {
+//			//
+//		}
+//		
+//		return(cond1 && ( (cond2 && cond3 || cond6 && cond7) || (cond4 && cond5) ));
+//		
+//		/*return(mapaObstaculos[posActual[0]-1][posActual[1]]=='X' 
+//				&& ( (mapaObstaculos[posActual[0]-1][posActual[1]+1]=='X'
+//					&& mapaObstaculos[posActual[0]-1][posActual[1]-1]=='X')
+//				|| (mapaObstaculos[posActual[0]][posActual[1]-1]=='X'
+//						&& mapaObstaculos[posActual[0]][posActual[1]-1]=='X') )
+//				);*/
+//		
+//	}
+//	
+//	private static int[] getPosGasolina(char[][] mapaObstaculos)
+//	{
+//		int posGasolina[] = new int[] {-1,-1};
+//		boolean encontrado = false;
+//
+//			for(int i=0; i< numFilas*2-1; i++) {
+//				for (int j = 2; j < numCol*2-2; j++)  //Quitando los arboles del borde
+//					if(mapaObstaculos[i][j] == 'G') {
+//						posGasolina = new int[]{i,j};
+//						encontrado = true;
+//						break;
+//					}
+//				if(encontrado) break;
+//			}
+//
+//		
+//		return posGasolina;
+//	}
+//	
+//	private static ESTADOS getEstadoGasolina(int [] posGasolina)
+//	{
+//		
+//		/* Misma columna y gasolina por encima */
+//		//if(posGasolina[1] == posActual[1] && posGasolina[0] <= posActual[0]) 
+//		//	return ESTADOS.GASOLINA_ARRIBA; 
+//		
+//		/* Gasolina a la derecha */
+//		 if(posGasolina[1] > posActual[1])
+//			return ESTADOS.GASOLINA_DCHA;
+//		
+//		/* Gasolina a la izqda */
+//		else if(posGasolina[1] < posActual[1])
+//			return ESTADOS.GASOLINA_IZQDA;
+//		
+//		/* Gasolina abajo */
+//		//else if(posGasolina[0] > posActual[0])
+//		//	return ESTADOS.GASOLINA_ABAJO;	
+//		
+//		return ESTADOS.NIL;
+//	}
 	
 	public void getContadoresEstados()
 	{
@@ -608,135 +508,135 @@ public class StateManager {
 		}
 	}
 	
-	private static HashSet<Integer> getHuecosFila(int[] indiceMapaJugador, double distancia, char[][] mapaObstaculos)
-	{
-		int indiceUltimaCasilla;
-		HashSet<Integer> huecosDetectados = new HashSet<Integer>();
-		HashSet<Integer> posiblesHuecos = new HashSet<Integer>();
-		
-		if(indiceMapaJugador[0] - distancia*2 > 0)// Limitamos el radio de busqueda al limite del mapa
-			indiceUltimaCasilla = indiceMapaJugador[0] - ((int)distancia*2);
-		else // Se sale del mapa
-			indiceUltimaCasilla = 1; 
-		
-		if(verbose) System.out.println("Indice fila pos jugador: " + indiceMapaJugador[0]);
-		if(verbose) System.out.println("Indice ultima casilla: "+ indiceUltimaCasilla);
-		if(verbose) System.out.println("Maxima col a explorar = " + (numCol*2-4)/2);
-		
-		boolean huecoValido = true;
-		
-		for(int iCol=2; iCol <= (numCol*2-4); iCol++) { // De izquierda a derecha del mapa
-			huecoValido = true;
-			for(int iFila=indiceMapaJugador[0]; iFila >= indiceUltimaCasilla; iFila--)  //Desde fila del jugador hasta la ultima casilla a explorar
-				if(mapaObstaculos[iFila][iCol] == 'X')
-				{
-					huecoValido = false;
-					break; // Pasamos a mirar la siguiente columna
-					
-				}
-			if(huecoValido) {
-				posiblesHuecos.add(iCol);
-				//if(verbose) System.out.println("POSIBLE HUECO cols: " +iCol);
-			}
-		}
-		
-		for(int iCol : posiblesHuecos) {	
-				
-			huecoValido = true;
-			// Tenemos una columna de dos posiciones de ancho despejada,
-			// hay que ver si el hueco es la subcasilla de la izqda o de la dcha
-			if(iCol-1 > 1) {
-				for(int iFila1=indiceMapaJugador[0]-1; iFila1 >= indiceUltimaCasilla; iFila1--) {
-					if(mapaObstaculos[iFila1][iCol-1] == 'X') {
-						//System.out.println("X en "+iFila1 + " "+ (iCol-1) );
-						huecoValido = false;
-						break; //Encuentra obstaculos pegados al hueco por la izqda							
-					}
-				}
-			}
-				
-			if(huecoValido)
-				if(iCol+1 < numCol*2-2) 
-					for(int iFila2=indiceMapaJugador[0]-1; iFila2 >= indiceUltimaCasilla; iFila2--) 
-						if(mapaObstaculos[iFila2][iCol+1] == 'X') {
-							huecoValido = false;
-							break; //Encuentra obstaculos pegados al hueco por la dcha	
-					}
-					
-			if(huecoValido)// Solo es valido si sirve para esquivar un obstaculo
-			{
-				huecoValido = false;
-				
-				if(iCol+1 < numCol*2-2) 
-					for(int iFila2=indiceMapaJugador[0]-1; iFila2 >= indiceUltimaCasilla; iFila2--) 
-						if(mapaObstaculos[iFila2][iCol-2] == 'X') {
-							huecoValido = true;
-							break; //Encuentra obstaculos pegados al hueco por la dcha	
-					}
-				
-				if(!huecoValido)
-					if(iCol+1 < numCol*2-2) 
-						for(int iFila2=indiceMapaJugador[0]-1; iFila2 >= indiceUltimaCasilla; iFila2--) 
-							if(mapaObstaculos[iFila2][iCol+2] == 'X') {
-								huecoValido = true;
-								break; //Encuentra obstaculos pegados al hueco por la dcha	
-						}
-				
-				if(huecoValido)
-					huecosDetectados.add(iCol); // Si llega aqui es que el hueco está libre por la dcha
-			}
-				
-		
-		}	
-		
-		return huecosDetectados;
-	
-	}
-	
-	private static ESTADOS getEstadoHueco(HashSet<Integer> huecos, int[] posActual)
-	{
-		int indiceMapaHueco=posActual[1];
-		boolean encontradoHuecoPosJugador = false;
-		
-		//Si encuentra un hueco en la misma columna del jugador
-		for(int hueco : huecos) 
-			if(hueco == posActual[1])
-			{
-				encontradoHuecoPosJugador = true; // Le damos prioridad
-				break;
-			}
-		
-		//Si no, elige el hueco mas cercano al jugador
-		if(!encontradoHuecoPosJugador) {
-			int difMenor = Integer.MAX_VALUE;
-			
-			for(int hueco : huecos) {
-				int difDistancia = Math.abs(hueco - posActual[1]); //Distancia en indice de columnas hasta el hueco
-				
-				if(difDistancia < difMenor) { // Si es menor que el minimo actual
-					difMenor = difDistancia; // Actualizamos la diferencia
-					indiceMapaHueco = hueco; // Guardamos ese posible mejor hueco
-				}
-				
-			}
-		}
-
-		/* Misma columna */
-		if(indiceMapaHueco == posActual[1]) 
-			return ESTADOS.HUECO_ARRIBA; 
-		
-		/* Hueco a la derecha */
-		if(indiceMapaHueco > posActual[1])
-			return ESTADOS.HUECO_DCHA;
-		
-		/* Gasolina a la izqda */
-		else if(indiceMapaHueco < posActual[1])
-			return ESTADOS.HUECO_IZQDA;
-		
-		
-		return ESTADOS.NIL;
-	}
-	
+//	private static HashSet<Integer> getHuecosFila(int[] indiceMapaJugador, double distancia, char[][] mapaObstaculos)
+//	{
+//		int indiceUltimaCasilla;
+//		HashSet<Integer> huecosDetectados = new HashSet<Integer>();
+//		HashSet<Integer> posiblesHuecos = new HashSet<Integer>();
+//		
+//		if(indiceMapaJugador[0] - distancia*2 > 0)// Limitamos el radio de busqueda al limite del mapa
+//			indiceUltimaCasilla = indiceMapaJugador[0] - ((int)distancia*2);
+//		else // Se sale del mapa
+//			indiceUltimaCasilla = 1; 
+//		
+//		if(verbose) System.out.println("Indice fila pos jugador: " + indiceMapaJugador[0]);
+//		if(verbose) System.out.println("Indice ultima casilla: "+ indiceUltimaCasilla);
+//		if(verbose) System.out.println("Maxima col a explorar = " + (numCol*2-4)/2);
+//		
+//		boolean huecoValido = true;
+//		
+//		for(int iCol=2; iCol <= (numCol*2-4); iCol++) { // De izquierda a derecha del mapa
+//			huecoValido = true;
+//			for(int iFila=indiceMapaJugador[0]; iFila >= indiceUltimaCasilla; iFila--)  //Desde fila del jugador hasta la ultima casilla a explorar
+//				if(mapaObstaculos[iFila][iCol] == 'X')
+//				{
+//					huecoValido = false;
+//					break; // Pasamos a mirar la siguiente columna
+//					
+//				}
+//			if(huecoValido) {
+//				posiblesHuecos.add(iCol);
+//				//if(verbose) System.out.println("POSIBLE HUECO cols: " +iCol);
+//			}
+//		}
+//		
+//		for(int iCol : posiblesHuecos) {	
+//				
+//			huecoValido = true;
+//			// Tenemos una columna de dos posiciones de ancho despejada,
+//			// hay que ver si el hueco es la subcasilla de la izqda o de la dcha
+//			if(iCol-1 > 1) {
+//				for(int iFila1=indiceMapaJugador[0]-1; iFila1 >= indiceUltimaCasilla; iFila1--) {
+//					if(mapaObstaculos[iFila1][iCol-1] == 'X') {
+//						//System.out.println("X en "+iFila1 + " "+ (iCol-1) );
+//						huecoValido = false;
+//						break; //Encuentra obstaculos pegados al hueco por la izqda							
+//					}
+//				}
+//			}
+//				
+//			if(huecoValido)
+//				if(iCol+1 < numCol*2-2) 
+//					for(int iFila2=indiceMapaJugador[0]-1; iFila2 >= indiceUltimaCasilla; iFila2--) 
+//						if(mapaObstaculos[iFila2][iCol+1] == 'X') {
+//							huecoValido = false;
+//							break; //Encuentra obstaculos pegados al hueco por la dcha	
+//					}
+//					
+//			if(huecoValido)// Solo es valido si sirve para esquivar un obstaculo
+//			{
+//				huecoValido = false;
+//				
+//				if(iCol+1 < numCol*2-2) 
+//					for(int iFila2=indiceMapaJugador[0]-1; iFila2 >= indiceUltimaCasilla; iFila2--) 
+//						if(mapaObstaculos[iFila2][iCol-2] == 'X') {
+//							huecoValido = true;
+//							break; //Encuentra obstaculos pegados al hueco por la dcha	
+//					}
+//				
+//				if(!huecoValido)
+//					if(iCol+1 < numCol*2-2) 
+//						for(int iFila2=indiceMapaJugador[0]-1; iFila2 >= indiceUltimaCasilla; iFila2--) 
+//							if(mapaObstaculos[iFila2][iCol+2] == 'X') {
+//								huecoValido = true;
+//								break; //Encuentra obstaculos pegados al hueco por la dcha	
+//						}
+//				
+//				if(huecoValido)
+//					huecosDetectados.add(iCol); // Si llega aqui es que el hueco está libre por la dcha
+//			}
+//				
+//		
+//		}	
+//		
+//		return huecosDetectados;
+//	
+//	}
+//	
+//	private static ESTADOS getEstadoHueco(HashSet<Integer> huecos, int[] posActual)
+//	{
+//		int indiceMapaHueco=posActual[1];
+//		boolean encontradoHuecoPosJugador = false;
+//		
+//		//Si encuentra un hueco en la misma columna del jugador
+//		for(int hueco : huecos) 
+//			if(hueco == posActual[1])
+//			{
+//				encontradoHuecoPosJugador = true; // Le damos prioridad
+//				break;
+//			}
+//		
+//		//Si no, elige el hueco mas cercano al jugador
+//		if(!encontradoHuecoPosJugador) {
+//			int difMenor = Integer.MAX_VALUE;
+//			
+//			for(int hueco : huecos) {
+//				int difDistancia = Math.abs(hueco - posActual[1]); //Distancia en indice de columnas hasta el hueco
+//				
+//				if(difDistancia < difMenor) { // Si es menor que el minimo actual
+//					difMenor = difDistancia; // Actualizamos la diferencia
+//					indiceMapaHueco = hueco; // Guardamos ese posible mejor hueco
+//				}
+//				
+//			}
+//		}
+//
+//		/* Misma columna */
+//		if(indiceMapaHueco == posActual[1]) 
+//			return ESTADOS.HUECO_ARRIBA; 
+//		
+//		/* Hueco a la derecha */
+//		if(indiceMapaHueco > posActual[1])
+//			return ESTADOS.HUECO_DCHA;
+//		
+//		/* Gasolina a la izqda */
+//		else if(indiceMapaHueco < posActual[1])
+//			return ESTADOS.HUECO_IZQDA;
+//		
+//		
+//		return ESTADOS.NIL;
+//	}
+//	
 // _____________________________________________________________________
 //                    METODOS PERCEPCION MAPA
 // _____________________________________________________________________
