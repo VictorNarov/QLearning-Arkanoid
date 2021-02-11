@@ -11,6 +11,7 @@ import core.player.AbstractPlayer;
 import ontology.Types;
 import ontology.Types.ACTIONS;
 import qlearning.StateManager.ESTADOS;
+import tools.Vector2d;
 
 import tools.ElapsedCpuTimer;
 
@@ -22,7 +23,7 @@ public class TrainingAgent extends AbstractPlayer {
 	private double gamma = 0.2; // Factor descuento recompensa futura
 
 	
-	boolean randomPolicy=false; // RandomPolicy o MaxQ
+	boolean randomPolicy=true; // RandomPolicy o MaxQ
 	
 	/* Variables */
 	ArrayList<Observation>[] inmov;
@@ -32,7 +33,8 @@ public class TrainingAgent extends AbstractPlayer {
 	private char[][] mapaObstaculos;
 	
 	/* Variables Q-Learning */
-	private int vidaAnterior;
+	//private int vidaAnterior;
+	private Vector2d posBolaAnterior;
 	static int numAccionesPosibles;
     protected Random randomGenerator; // Random generator for the agent
     protected ArrayList<Types.ACTIONS> actions; // List of available actions for the agent
@@ -64,7 +66,8 @@ public class TrainingAgent extends AbstractPlayer {
 		StateManager.numCol = this.numCol;
 		StateManager.numFilas = this.numFilas;
 		
-		vidaAnterior = so.getAvatarHealthPoints();
+		//vidaAnterior = so.getAvatarHealthPoints();
+		posBolaAnterior = new Vector2d(-1, -1);
     	numAccionesPosibles = StateManager.ACCIONES.length;
     }
     
@@ -79,21 +82,23 @@ public class TrainingAgent extends AbstractPlayer {
     	// -----------------------------------------------------------------------
     	// 						01 - PERCEPCIÓN DEL ENTORNO
     	// -----------------------------------------------------------------------
-    	int vidaActual = stateObs.getAvatarHealthPoints();
+    	//int vidaActual = stateObs.getAvatarHealthPoints();
+
     	
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
     	int[] posJugador = StateManager.getIndiceMapa(pos); // Indice del mapa
     	
-    	if(verbose) System.out.println("VIDA ACTUAL = "+vidaActual);
+    	//if(verbose) System.out.println("VIDA ACTUAL = "+vidaActual);
     	if(verbose) System.out.println("POSICION = " + posJugador[0] + "-" + posJugador[1]);   	
     	
     	this.mapaObstaculos = StateManager.getMapaObstaculos(stateObs); // Actualizamos el mapa percibido
     	mapaObstaculos[posJugador[0]][posJugador[1]] = 'O'; // Marcamos la posicion del jugador
+    	Vector2d posBolaActual = StateManager.getPosBolaReal(stateObs);
 
     	if(verbose) StateManager.pintaMapaObstaculos(mapaObstaculos);
     	
     	// Percibimos el estado actual e incrementamos su contador
-    	ESTADOS estadoActual = StateManager.getEstado(stateObs, vidaAnterior, this.mapaObstaculos);
+    	ESTADOS estadoActual = StateManager.getEstado(stateObs, this.posBolaAnterior, this.mapaObstaculos);
     	estadoActual.incrementa();
     	if(verbose) System.out.println("Estado actual: " + estadoActual.toString());
     	
@@ -118,11 +123,11 @@ public class TrainingAgent extends AbstractPlayer {
     	ACTIONS action;
     	
     	
-    	// Criterio de selección: random hasta 1/3 iteraciones
-    	if(StateManager.iteracionActual < StateManager.numIteraciones * 0.3)
-    		randomPolicy = true;
-    	else
-    		randomPolicy = false;
+//    	// Criterio de selección: random hasta 1/3 iteraciones
+//    	if(StateManager.iteracionActual < StateManager.numIteraciones * 0.3)
+//    		randomPolicy = true;
+//    	else
+//    		randomPolicy = false;
     	
     	// Criterio de selección: random
     	if(randomPolicy) {
@@ -154,9 +159,11 @@ public class TrainingAgent extends AbstractPlayer {
         // Actualizamos la tabla Q
         StateManager.Q.put(new ParEstadoAccion(estadoActual, action), value);
  	
-		vidaAnterior = vidaActual;
+		 
 		
 		if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());
+		
+		posBolaAnterior = posBolaActual;
 		
 	  	//if(stateObs.isGameOver()) this.saveQTable(); //Guardamos la tablaQ si termina el juego
 	  	

@@ -39,18 +39,18 @@ public class Test {
 		String recordActionsFile = null;// "actions_" + games[gameIdx] + "_lvl"
 	
 		
-		int levelIdx = 3; // level names from 0 to 4 (game_lvlN.txt).
+		int levelIdx =4; // level names from 0 to 4 (game_lvlN.txt).
 		String level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 		StateManager stateManager;
 		
 //		ArcadeMachine.playOneGame(game, level1, recordActionsFile, 234234234);
 		
-		stateManager = new StateManager(true,true);
-		StateManager.numIteraciones = 1; // Numero de partidas a jugar
-		ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0);
+//		stateManager = new StateManager(true,true);
+//		StateManager.numIteraciones = 1; // Numero de partidas a jugar
+//		ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0);
+//		
 		
-		
-		boolean training = true; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
+		boolean training = false; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
 		boolean verbose = true; // Mostrar informacion de la partida mientras se ejecuta
 		
 		if(training)	// Crea la tabla Q a random y juega partidas con acciones aleatorias
@@ -58,12 +58,12 @@ public class Test {
 			visuals = false;
 			boolean testingAfterTraining = true; // Probar todos los niveles despues del entrenamiento
 			boolean randomTablaQ = true; // Verdadero: crea la tabla Q con valores random, si no, a cero
-			boolean guardarGrafica = false; // Si queremos guardar una imagen de la grafica Ticks/epoca
+			boolean guardarGrafica = true; // Si queremos guardar una imagen de la grafica Ticks/epoca
 			stateManager = new StateManager(randomTablaQ,false);
-			StateManager.numIteraciones = 500; // Numero de partidas a jugar
+			StateManager.numIteraciones = 200; // Numero de partidas a jugar
 
 			/*
-			 * Grafica Aprendizaje Resultado Ticks / Epoca
+			 * Grafica Aprendizaje Resultado Score / Epoca
 			 */
 			double [] Y = null;
 			double [] X = null;
@@ -87,10 +87,10 @@ public class Test {
 				System.out.println("\t\t\t\t\t\t\t\t\t\tIteración " + StateManager.iteracionActual + " / "+ StateManager.numIteraciones);
 				System.out.println("\t\t\t\t\t\t\t\t\t\tlevel: " + levelIdx);
 				
-				double ticksPartida = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0)[2];
+				double scorePartida = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0)[1];
 				
 				if(guardarGrafica)
-					Y[StateManager.iteracionActual-1] = ticksPartida;
+					Y[StateManager.iteracionActual-1] = scorePartida;
 			}
 		
 			stateManager.saveQTable();
@@ -121,33 +121,34 @@ public class Test {
 			if(testingAfterTraining) // Probar todos los niveles
 			{
 				visuals = true;
-				double[] ticksPartidas = new double[7];
+				double[] scorePartidas = new double[7];
 				
 				stateManager = new StateManager("TablaQ.csv", verbose);
-				for (int i = 0; i <= 6; i++) {
+				for (int i = 0; i <= 4; i++) {
 				
 					levelIdx = i; // level names from 0 to 4 (game_lvlN.txt).
 					level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
-					ticksPartidas[i] = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0)[2];
+					scorePartidas[i] = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0)[1];
 				}
 				
 				System.out.println("____________________________________________________");
-				System.out.println("____________ ESTADISTICAS PARTIDAS _________________");
+				System.out.println("____________ ESTADÍSTICAS PARTIDAS _________________");
 				double total = 0;
-				for(int i = 0; i <= 6; i++) {
-						System.out.println("TICKS JUEGO " + i + " =\t"+ ticksPartidas[i]);
-						total += ticksPartidas[i];
+				for(int i = 0; i <= 4; i++) {
+						System.out.println("SCORE JUEGO " + i + " =\t"+ scorePartidas[i]);
+						total += scorePartidas[i];
 				}
 				
-				System.out.println("MEDIA TICKS =\t" + total / 7.0);
+				System.out.println("PUNTUACIÓN MEDIA =\t" + total / 5.0);
 				System.out.println("____________________________________________________");
 				
 			}
 		}
 		else // Modo Test, probar el nivel indicado
 		{
-			stateManager = new StateManager("TablaQ.csv", true);
+			stateManager = new StateManager("TablaQ.csv", verbose);
 			ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0);
+			System.out.println("xmax = "+ StateManager.xmax + " xmin = "+ StateManager.xmin);
 		}
 		
 		

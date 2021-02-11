@@ -12,6 +12,7 @@ import ontology.Types.ACTIONS;
 import qlearning.StateManager.ESTADOS;
 
 import tools.ElapsedCpuTimer;
+import tools.Vector2d;
 
 
 public class TestingAgent extends AbstractPlayer {
@@ -24,7 +25,8 @@ public class TestingAgent extends AbstractPlayer {
 	private char[][] mapaObstaculos;
 	
 	/* Variables Q-Learning */
-	private int vidaAnterior;
+	//private int vidaAnterior;
+	private Vector2d posBolaAnterior;
 	int numAccionesPosibles;
 	
     protected Random randomGenerator; // Random generator for the agent.
@@ -57,7 +59,8 @@ public class TestingAgent extends AbstractPlayer {
 		StateManager.numCol = this.numCol;
 		StateManager.numFilas = this.numFilas;
 		
-		vidaAnterior = so.getAvatarHealthPoints();
+		//vidaAnterior = so.getAvatarHealthPoints();
+		posBolaAnterior = new Vector2d(-1,-1);
     	numAccionesPosibles = StateManager.ACCIONES.length;
     }
 
@@ -72,21 +75,22 @@ public class TestingAgent extends AbstractPlayer {
     	// -----------------------------------------------------------------------
     	// 						01 - PERCEPCIÓN DEL ENTORNO
     	// -----------------------------------------------------------------------
-    	int vidaActual = stateObs.getAvatarHealthPoints();
+    	//int vidaActual = stateObs.getAvatarHealthPoints();
     	
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
     	int[] posJugador = StateManager.getIndiceMapa(pos); // Indice del mapa
     	
-    	if(verbose) System.out.println("VIDA ACTUAL = "+vidaActual);
+    	//if(verbose) System.out.println("VIDA ACTUAL = "+vidaActual);
     	if(verbose) System.out.println("POSICION = " + posJugador[0] + "-" + posJugador[1]);
     	
     	this.mapaObstaculos = StateManager.getMapaObstaculos(stateObs); // Actualizamos el mapa percibido
     	mapaObstaculos[posJugador[0]][posJugador[1]] = 'O'; // Marcamos la posicion del jugador
+    	Vector2d posBolaActual = StateManager.getPosBolaReal(stateObs);
 
     	if(verbose) StateManager.pintaMapaObstaculos(mapaObstaculos);
     	
     	// Percibimos el estado actual e incrementamos su contador
-    	ESTADOS estadoActual = StateManager.getEstado(stateObs, vidaAnterior, this.mapaObstaculos);
+    	ESTADOS estadoActual = StateManager.getEstado(stateObs, posBolaAnterior, this.mapaObstaculos);
     	estadoActual.incrementa();
     	if(verbose) System.out.println("Estado actual: " + estadoActual.toString());
     	
@@ -100,7 +104,17 @@ public class TestingAgent extends AbstractPlayer {
     	
     	if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());
    
-		vidaAnterior = vidaActual;
+    	posBolaAnterior = posBolaActual;
+    	
+	  	
+//		if(verbose)
+//			try {
+//				Thread.sleep(10);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+		
 		
         return action;
     }
