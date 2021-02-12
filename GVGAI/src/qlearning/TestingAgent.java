@@ -84,7 +84,9 @@ public class TestingAgent extends AbstractPlayer {
     	if(verbose) System.out.println("POSICION = " + posJugador[0] + "-" + posJugador[1]);
     	
     	this.mapaObstaculos = StateManager.getMapaObstaculos(stateObs); // Actualizamos el mapa percibido
-    	mapaObstaculos[posJugador[0]][posJugador[1]] = 'O'; // Marcamos la posicion del jugador
+//    	mapaObstaculos[posJugador[0]][posJugador[1]] = '='; // Marcamos la posicion del jugador
+//    	mapaObstaculos[posJugador[0]][posJugador[1]+1] = '=';
+//    	mapaObstaculos[posJugador[0]][posJugador[1]-1] = '=';
     	Vector2d posBolaActual = StateManager.getPosBolaReal(stateObs);
 
     	if(verbose) StateManager.pintaMapaObstaculos(mapaObstaculos);

@@ -341,14 +341,15 @@ public class StateManager {
 	{
 		//int vidaActual = obs.getAvatarHealthPoints();
 		posActual = obs.getAvatarPosition();
-		double desplazamiento = ((double)70*obs.getGameTick()) / 2000.0;
+		//double desplazamiento = ((double)70*obs.getGameTick()) / 2000.0;
 
-//
-//		double desplazamiento = 0;
-//		if(obs.getGameTick() < 1333 && obs.getGameTick() >= 666)
-//			desplazamiento = 35;
-//		else if(obs.getGameTick() >= 1333)
-//			desplazamiento = 70;
+		//double desplazamiento = new Random().nextInt(70);
+
+		double desplazamiento = 0;
+		if(obs.getGameTick() < 1333 && obs.getGameTick() >= 666)
+			desplazamiento = 35;
+		else if(obs.getGameTick() >= 1333)
+			desplazamiento = 70;
 		
 		if(verbose)System.out.println("Desplazamiento: " + desplazamiento);
 		posActual.x += desplazamiento;
@@ -677,41 +678,70 @@ public class StateManager {
 	public static char[][] getMapaObstaculos(StateObservation obs)
 	{
 		// El desplazamiento de un jugador es en 0.5 casillas
-		char[][] mapaObstaculos = new char[numFilas*2][numCol*2];
+		char[][] mapaObstaculos = new char[numFilas][numCol];
 		
-		for(int i=0; i<numFilas*2; i++)
-			for(int j=0; j<numCol*2; j++)
-				mapaObstaculos[i][j] = ' ';
+		for(int i=0; i<numFilas; i++)
+			for(int j=0; j<numCol; j++)
+				mapaObstaculos[i][j] = '.';
 		
-		
-	    	for(ArrayList<Observation> lista : obs.getMovablePositions())
-	    		for(Observation objeto : lista)
-	    		{
-	    			
-	    			double[] pos = getCeldaPreciso(objeto.position, obs.getWorldDimension()); // Posicion en casilla real 0.5
-	    			int [] indicePos = getIndiceMapa(pos); // Indice del mapa
-	    		
-	    			
-	    			//System.out.println(this.mapaObstaculos[pos[0]][pos[1]]);
-	    			//System.out.println("Objeto en " + pos[0] + "-" + pos[1] + " = "+ objeto.itype + " REAL: " + objeto.position.toString());
+		ArrayList<Observation>[][] listaObs = obs.getObservationGrid();
+		for (int i = 0; i < listaObs.length; i++) 
+			for (int j = 0; j < listaObs[i].length; j++) 
+				if(listaObs[i][j].size() > 0)
+					for (int k = 0; k < listaObs[i][j].size(); k++) {
+						
+						Observation objeto = listaObs[i][j].get(k);
+						
+						double[] pos = getCeldaPreciso(objeto.position, obs.getWorldDimension()); // Posicion en casilla real 0.5
+		    			//int [] indicePos = getIndiceMapa(pos); // Indice del mapa 
 
-	    			switch(objeto.itype)
-					{    					
-						case 0:
-							mapaObstaculos[indicePos[0]][indicePos[1]] = '|';
-							break;
-						case 11:
-							mapaObstaculos[indicePos[0]][indicePos[1]] = '-';
-							break;
-						case 5:
-							mapaObstaculos[indicePos[0]][indicePos[1]] = 'X';
-							System.out.println("Objeto en " + pos[0] + "-" + pos[1] + " = "+ objeto.itype + " REAL: " + objeto.position.toString());
-							break;
-						default:
-							mapaObstaculos[indicePos[0]][indicePos[1]] = '.';
-							break;
-	    		}
-			}
+						int [] indicePos = new int[] {j,i};
+		    			
+		    			//System.out.println(this.mapaObstaculos[pos[0]][pos[1]]);
+		    			//System.out.println("Objeto en " + pos[0] + "-" + pos[1] + " = "+ objeto.itype + " REAL: " + objeto.position.toString());
+
+		    			switch(objeto.itype)
+						{    					
+							case 0:// Muro
+								mapaObstaculos[indicePos[0]][indicePos[1]] = '|';
+								break;
+							case 1: // Barra
+								mapaObstaculos[indicePos[0]][indicePos[1]] = '-';
+								mapaObstaculos[indicePos[0]][indicePos[1]-1] = '-';
+								mapaObstaculos[indicePos[0]][indicePos[1]+1] = '-';
+								break;
+							case 11: // Ladrillo que ocupa dos posiciones
+								mapaObstaculos[indicePos[0]][indicePos[1]] = '=';
+								mapaObstaculos[indicePos[0]][indicePos[1]+1] = '=';
+								break;
+							case 5: //Bola cuando baja
+							case 4: //Bola cuando sube
+								mapaObstaculos[indicePos[0]][indicePos[1]] = 'O';
+								System.out.println("Bola en " + pos[0] + "-" + pos[1] + " = "+ objeto.itype + " REAL: " + objeto.position.toString());
+								break;
+							case 8: // Ladrillos que se rompen x2
+								mapaObstaculos[indicePos[0]][indicePos[1]] = 'X';
+								mapaObstaculos[indicePos[0]][indicePos[1]+1] = 'X';
+								break;
+							case 9: // Ladrillo que se rompe x1
+								mapaObstaculos[indicePos[0]][indicePos[1]] = 'X';
+								break;
+							default: //
+								System.out.println("TYPE: " + objeto.itype );
+								mapaObstaculos[indicePos[0]][indicePos[1]] = '?';
+								
+								break;
+		    		}	
+											
+		}
+		
+		
+//    	for(ArrayList<Observation>[] lista : obs.getObservationGrid())
+//    		for(ArrayList<Observation> objetos : lista)
+//    			for(Observation objeto : objetos)
+//	    		{
+	    			
+	    			
     	
     	return mapaObstaculos;
 	}
@@ -732,7 +762,7 @@ public class StateManager {
 	 */
 	public static int[] getIndiceMapa(double [] pos)
 	{
-		return new int[]{(int)(pos[0]*2), (int)(pos[1]*2)};
+		return new int[]{(int)(pos[0]), (int)(pos[1])};
 	}
 	
 	/*
@@ -947,9 +977,9 @@ public class StateManager {
 	{
 		
 		System.out.println("-----------------------------------");
-		for(int i=0; i<numFilas*2; i++) {
+		for(int i=0; i<numFilas; i++) {
     		System.out.println();
-    		for(int j=0; j<numCol*2; j++)
+    		for(int j=0; j<numCol; j++)
     			System.out.print(mapaObstaculos[i][j]);
     	}
     	System.out.println();
