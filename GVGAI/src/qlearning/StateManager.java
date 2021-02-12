@@ -30,6 +30,8 @@ public class StateManager {
 	public static int iteracionActual;
 	Random randomGenerator;
 	
+	public static int numObjetivos;
+	
 	//Variables comunes a varias clases
 	public static int numCol;
 	public static int numFilas;
@@ -71,7 +73,7 @@ public class StateManager {
 	public static final ACTIONS[] ACCIONES = {ACTIONS.ACTION_USE, ACTIONS.ACTION_LEFT, ACTIONS.ACTION_RIGHT, ACTIONS.ACTION_NIL};
 	
 	//Direcciones
-	private enum DIRECCIONES{ARRIBA, ABAJO, IZQDA, DCHA};
+	private enum DIRECCIONES{IZQDA, DCHA, MEDIO};
 	
 	public static HashMap<ParEstadoAccion, Integer> R; // TABLA R
 	public static HashMap<ParEstadoAccion, Double> Q; // TABLA Q
@@ -81,6 +83,15 @@ public class StateManager {
 	private static Vector2d posActual;
 	private int numEstados = ESTADOS.values().length;
 	private int numAcciones = ACCIONES.length;
+	
+	// Variables prediccion trayectoria
+	private static double desplazamiento = 35;
+	private static double scoreAnterior = 0;
+	private static double pendienteAnterior;
+	private static int numVecesSinPuntos = 0;
+	private static DIRECCIONES posReboteLadrillo=DIRECCIONES.MEDIO;
+	private static boolean primeraVez = true;
+	private static ArrayList<Integer> huecos;
 	
 	public StateManager(boolean randomTablaQ, boolean verbose) {
 		if(verbose) System.out.println("Inicializando tablas Q y R.....");
@@ -109,6 +120,20 @@ public class StateManager {
 		StateManager.verbose = verbose;
 	}
 
+	/*
+	 * Reinicializa las variables en un cambio de partida
+	 */
+	public static void inicializaJuego()
+	{
+		velocidadAnterior=0;
+		xmax = 519;
+		xmin = 25;
+		desplazamiento = 35;
+		scoreAnterior = 0;
+		numVecesSinPuntos = 0;
+		primeraVez = true;
+	}
+	
 	public static void capturaEstado(String fileName) throws Exception {
 		   Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		   Rectangle screenRectangle = new Rectangle(8,2, 240, 390);
@@ -339,20 +364,30 @@ public class StateManager {
 	
 	public static ESTADOS getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
+		if(primeraVez) { //Localiza los huecos en las filas de osbtauclos del mapa
+			 huecos = getHuecos(mapaObstaculos);
+			 if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
+			 cuentaObjetivos(mapaObstaculos); //Actualiza el numero de objetivos de este mapa
+			 primeraVez = false;
+		}
+
+		
 		//int vidaActual = obs.getAvatarHealthPoints();
 		posActual = obs.getAvatarPosition();
 		//double desplazamiento = ((double)70*obs.getGameTick()) / 2000.0;
 
-		//double desplazamiento = new Random().nextInt(70);
 
-		double desplazamiento = 0;
-		if(obs.getGameTick() < 1333 && obs.getGameTick() >= 666)
-			desplazamiento = 35;
-		else if(obs.getGameTick() >= 1333)
-			desplazamiento = 70;
+//		double desplazamiento = new Random().nextInt(20)+20;
+//
+//		if(obs.getGameTick() >= 1000)
+//			desplazamiento += 15;
+
+//		if(obs.getGameTick() < 1333 && obs.getGameTick() >= 666)
+//			desplazamiento = 35;
+//		else if(obs.getGameTick() >= 1333)
+//			desplazamiento = 70;
 		
-		if(verbose)System.out.println("Desplazamiento: " + desplazamiento);
-		posActual.x += desplazamiento;
+
 		//posActual = getIndiceMapa(pos);
 		Vector2d posBola = getPosBolaReal(obs);
 		double[] celdaPosBola = getCeldaPreciso(posBola, obs.getWorldDimension());
@@ -365,6 +400,56 @@ public class StateManager {
 		
 		ACTIONS ultimaAccion = obs.getAvatarLastAction();
 		
+		golpeaMuro(posBola, posBolaAnterior);
+		
+		if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
+		
+		if(golpeaBola(posBola, posBolaAnterior))
+		{
+			if(verbose) System.out.println("Golpea la bola");
+			
+			double scoreActual = obs.getGameScore();
+			if(scoreActual == scoreAnterior) // No ha roto ningun ladrillo
+			{
+				if(verbose) System.out.println("No ha roto ningun ladrillo");
+				numVecesSinPuntos++;
+				
+				if(numVecesSinPuntos >= 3) {
+					if(verbose)System.out.println("Se queda pillado más de 3 veces rebotando en "+posReboteLadrillo.toString());
+					
+					if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x <= 2*xmax/10)
+						desplazamiento = 0;
+					else if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x > 2*xmax/10)
+						desplazamiento = 70;
+					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x >= 8*xmax/10 )
+							desplazamiento = 70;
+					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x < 8*xmax/10 )
+						desplazamiento = 0;
+					else
+						desplazamiento = new Random().nextInt(70);
+					
+					
+				}
+					
+				
+			}
+			else {
+				if(verbose) System.out.println("Aumenta la puntuación!");
+				numVecesSinPuntos = 0;
+				scoreAnterior = scoreActual;
+				if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
+			}
+				
+		}
+		
+		//if(Math.abs(pendienteAnterior) >= 1)
+		//	desplazamiento = 0;
+		
+		
+		if(verbose)System.out.println("Desplazamiento: " + desplazamiento);
+		posActual.x += desplazamiento;
+		
+		// Recalculamos el limite de las paredes del mapa
 		if(posBola.x > xmax)
 			xmax = posBola.x;
 		
@@ -506,60 +591,164 @@ public class StateManager {
 		return (posBola[0] > posBolaAnterior[0]);
 	}
 	
-	private static int getColCorteBola(double[] posBola, double[] posBolaAnterior)
+	private static double getPendienteBola(Vector2d posBola, Vector2d posBolaAnterior)
 	{
-		/*
-		 * Recta determinada por los puntos P1{f1,c1} - P2{f1,c2}
-		 * Ecuación punto-pendiente
-		 * X = FILA ; Y = COL
-		 * Pendiente m = (c2-c1) / (f2-f1)
-		 * 
-		 * C(F) = c1 + m*(F-f1)
-		 */
+		double bolaX = posBola.x;
+		double bolaY = (-1) * posBola.y;
+		double bolaAntX = posBolaAnterior.x;
+		double bolaAntY = (-1) * posBolaAnterior.y;
+		
 
-		int colMax = 40;
-		int filaMax = 36;
+		// Pendiente
+		double m = (bolaY-bolaAntY) / (bolaX-bolaAntX);
 		
-		
-		double f1 = posBola[0]; double c1 = posBola[1];
-		double f2 = posBolaAnterior[0]; double c2 = posBolaAnterior[1];
-		
-		if(verbose) System.out.printf("P1 = {%f, %f} - P2 = {%f, %f} \n", f1,c1,f2,c2);
-		
-		double m = (double)(f2-f1) / (double)(c2-c1);
-		
-		if(verbose) System.out.println("m = ("+f2 + "-" + f1 + ")/("+c2 +"-"+c1+")= "+ m);
-		
-		double corteOX = m*(0-f1) + c1;
-		if(verbose) System.out.println("CorteOX= "+ corteOX);
-		// Rebota en la pared izquierda
-		if(corteOX < 0)
-		{
-			if(verbose) System.out.println("Rebota con pared izquierda");
-			// Componente x Punto de corte con el eje y 
-			double filaCorteOY = -1 * c1 / m + f1;
-			m = -1 * m; //Pendiente al rebotar con la pared	
-			
-			corteOX = m * (0-filaCorteOY);	
-		}
-		else if(corteOX > colMax) // Rebota en la pared derecha
-		{
-			if(verbose) System.out.println("Rebota con pared derecha");
-			//Componente x Punto de corte con el borde derecho
-			double filaCorteBorde = (colMax - c1) / m + f1;
-			m = -1 * m; //Pendiente al rebotar con la pared	
-			
-			corteOX = m * (0-filaCorteBorde) + colMax;
-		}
-		
-		//double angulo = Math.toDegrees(Math.atan(m));
-		
-		
-		
-		
-		return (int)Math.floor(corteOX);
-		
+		return m;
 	}
+	
+	private static double[] getCentroideObjetivos(char mapaObstaculos[][])
+	{
+		double fila = 0;
+		double col = 0;
+		int contador = 0;
+		
+		// Buscamos todos los objetivos y vamos acumulado sus coordenadas
+		for (int i = 0; i < numCol; i++) 
+			for (int j = numFilas-1; j >=0; j--)
+				if(mapaObstaculos[j][i] == 'X')
+				{
+					fila+=j;
+					col+=i;
+					contador++;
+				}
+		
+		// Devolvemos la media
+		return new double[] {fila/contador, col/contador};
+							
+	}
+	
+	/*
+	 * Obtiene una lista de todas las columnas de huecos en la fila de obstaculos mas cercana
+	 */
+	private static ArrayList<Integer> getHuecos(char mapaObstaculos[][])
+	{
+		ArrayList<Integer> huecos = new ArrayList<Integer>();
+		int filaObstaculos = -1;
+		
+		//Busca la primera fila donde haya una linea de obstaculos
+		for (int i = 0; i < numCol; i++) {
+			for (int j = numFilas-1; j >=0; j--) {
+				if(mapaObstaculos[j][i] == '=') //Ladrillo irrompible
+				{
+					filaObstaculos = j;
+
+				}
+			}
+			if(filaObstaculos != -1) break; //Localiza la fila del hueco
+		}
+		
+		
+		if(filaObstaculos != -1) //Localiza la fila del hueco
+			for (int i = 0; i < numCol; i++)// Añadimos todas las columnas de los huecos de esa fila
+				if(mapaObstaculos[filaObstaculos][i] == '.' || mapaObstaculos[filaObstaculos][i] == 'X'){
+					huecos.add(i);
+				}
+		
+		if(verbose) System.out.println("Huecos del mapa encontrados en: " +huecos.toString());
+		return huecos;
+	}
+	
+	/*
+	 * Busca el hueco de ladrillos más cercano al centroide de objetivos
+	 */
+	private static DIRECCIONES getDirHueco(char mapaObstaculos[][])
+	{
+		DIRECCIONES dirHueco = null;
+		double centroideObjetivos[] = getCentroideObjetivos(mapaObstaculos);
+		double minDistancia = Double.POSITIVE_INFINITY;
+		int huecoMenorDistancia = -1;
+		
+		for(int hueco : huecos) {
+			double distancia = Math.pow(0 - centroideObjetivos[0], 2) + Math.pow(hueco - centroideObjetivos[1], 2);
+			
+			if(distancia < minDistancia)
+			{
+				minDistancia = distancia;
+				huecoMenorDistancia = hueco;
+			}
+		}
+		
+		int tercio = numCol / 3;
+		if(huecoMenorDistancia <= tercio)
+			dirHueco = DIRECCIONES.IZQDA;
+		
+		else if(huecoMenorDistancia > tercio && huecoMenorDistancia < 2*tercio)
+			dirHueco = DIRECCIONES.MEDIO;
+					
+		else dirHueco = DIRECCIONES.DCHA;
+					
+		if(verbose) System.out.println("Hueco más cercano encontrado en la parte: " + dirHueco);
+		return dirHueco;
+				
+
+	}
+	
+//	private static int getColCorteBola(double[] posBola, double[] posBolaAnterior)
+//	{
+//		/*
+//		 * Recta determinada por los puntos P1{f1,c1} - P2{f1,c2}
+//		 * Ecuación punto-pendiente
+//		 * X = FILA ; Y = COL
+//		 * Pendiente m = (c2-c1) / (f2-f1)
+//		 * 
+//		 * C(F) = c1 + m*(F-f1)
+//		 */
+//
+//		int colMax = 40;
+//		int filaMax = 36;
+//		
+//		
+//		double f1 = posBola[0]; double c1 = posBola[1];
+//		double f2 = posBolaAnterior[0]; double c2 = posBolaAnterior[1];
+//		
+//		if(verbose) System.out.printf("P1 = {%f, %f} - P2 = {%f, %f} \n", f1,c1,f2,c2);
+//		
+//		double m = getPendienteBola(posBola,posBolaAnterior);
+//		
+//		if(verbose) System.out.println("m = ("+f2 + "-" + f1 + ")/("+c2 +"-"+c1+")= "+ m);
+//		
+//		double corteOX = m*(0-f1) + c1;
+//		if(verbose) System.out.println("CorteOX= "+ corteOX);
+//		// Rebota en la pared izquierda
+//		if(corteOX < 0)
+//		{
+//			if(verbose) System.out.println("Rebota con pared izquierda");
+//			// Componente x Punto de corte con el eje y 
+//			double filaCorteOY = -1 * c1 / m + f1;
+//			m = -1 * m; //Pendiente al rebotar con la pared	
+//			
+//			corteOX = m * (0-filaCorteOY);	
+//		}
+//		else if(corteOX > colMax) // Rebota en la pared derecha
+//		{
+//			if(verbose) System.out.println("Rebota con pared derecha");
+//			//Componente x Punto de corte con el borde derecho
+//			double filaCorteBorde = (colMax - c1) / m + f1;
+//			m = -1 * m; //Pendiente al rebotar con la pared	
+//			
+//			corteOX = m * (0-filaCorteBorde) + colMax;
+//		}
+//		
+//		// Guardamos la pendiente para saber de donde nos viene la bola
+//		pendienteAnterior = m;
+//		
+//		//double angulo = Math.toDegrees(Math.atan(m));
+//		
+//		
+//		
+//		
+//		return (int)Math.floor(corteOX);
+//		
+//	}
 
 	private static double getColPredict(StateObservation obs, Vector2d posBolaAnterior)
 	{
@@ -567,8 +756,8 @@ public class StateManager {
 		double bolaX = posBola.x;
 		double bolaY = (-1) * posBola.y;
 		
-		double bolaAntX = posBolaAnterior.x;
-		double bolaAntY = (-1) * posBolaAnterior.y;
+		//double bolaAntX = posBolaAnterior.x;
+		//double bolaAntY = (-1) * posBolaAnterior.y;
 		
 		double muroIzqX = xmin; // Recta colisión con muro izqda: 	X = 25
 		double muroDchX = xmax;// Recta colisión muro dcha:			X = 525
@@ -576,7 +765,7 @@ public class StateManager {
 		
 
 		// Pendiente
-		double m = (bolaY-bolaAntY) / (bolaX-bolaAntX);
+		double m = getPendienteBola(posBola, posBolaAnterior);
 		
 		if(verbose) System.out.println("Pendiente m = " + m);
 		
@@ -627,7 +816,7 @@ public class StateManager {
 	private static ESTADOS getEstadoTrayectoriaBola(double colCorteBola, double velocidadJugador, double aceleracion, ACTIONS ultimaAccion)
 	{
 		double colJugador = posActual.x;
-		System.out.println(colJugador + ":::::" + colCorteBola);
+		if(verbose)System.out.println(colJugador + ":::::" + colCorteBola);
 		//colCorteBola = colCorteBola -10;
 		
 		
@@ -646,7 +835,7 @@ public class StateManager {
 				return ESTADOS.BOLA_CENTRO;
 		}
 		else if( colCorteBola < xmin || colCorteBola > xmax) {
-			System.out.println("xmin: " + xmin + " xmax: " + xmax);
+			if(verbose)System.out.println("xmin: " + xmin + " xmax: " + xmax);
 			return ESTADOS.NIL;
 		}
 			
@@ -663,6 +852,48 @@ public class StateManager {
 		return Math.sqrt(Math.pow((posBola.x - posBolaAnterior.x), 2) + Math.pow((posBola.y - posBolaAnterior.y), 2));
 	}
 
+	private static boolean golpeaBola(Vector2d posBola, Vector2d posBolaAnterior)
+	{
+		return(posBola.y >= posBolaAnterior.y  && posBola.y>=420 && posBola.y<=440);
+			
+	}
+	
+	private static void golpeaMuro(Vector2d posBola, Vector2d posBolaAnterior)
+	{
+		if(getPendienteBola(posBola,posBolaAnterior) != pendienteAnterior && posBola.y <= 425) {
+			double tercio = xmax / 3;
+			DIRECCIONES dir=null;
+			if(posBola.x <= tercio)
+				dir = DIRECCIONES.IZQDA;
+			else if(posBola.x > tercio && posBola.x < 2*tercio)
+				dir = DIRECCIONES.MEDIO;
+			else
+				dir = DIRECCIONES.DCHA;
+				
+			posReboteLadrillo = dir;
+			if(verbose) System.out.println("BOLA REBOTA EN LA ZONA: "+dir);
+		}
+			
+		
+	}
+	
+	/*
+	 * Obtiene un desplazamiento aleatorio en el rango de direccion pasada por parametro
+	 */
+	private static double getDesplazamientoDir(DIRECCIONES dir)
+	{
+		Random r = new Random();
+		
+		
+		if(dir.equals(DIRECCIONES.IZQDA))
+			return r.nextInt(10);
+		
+		else if(dir.equals(DIRECCIONES.DCHA))
+			return r.nextInt(10)+60;
+		
+		else return r.nextInt(20) + 25;
+	}
+	
 	public void getContadoresEstados()
 	{
 		System.out.println("____________ CONTADORES ESTADOS _____________________");
@@ -688,9 +919,9 @@ public class StateManager {
 		for (int i = 0; i < listaObs.length; i++) 
 			for (int j = 0; j < listaObs[i].length; j++) 
 				if(listaObs[i][j].size() > 0)
-					for (int k = 0; k < listaObs[i][j].size(); k++) {
-						
-						Observation objeto = listaObs[i][j].get(k);
+					
+				{						
+						Observation objeto = listaObs[i][j].get(0);
 						
 						double[] pos = getCeldaPreciso(objeto.position, obs.getWorldDimension()); // Posicion en casilla real 0.5
 		    			//int [] indicePos = getIndiceMapa(pos); // Indice del mapa 
@@ -717,7 +948,7 @@ public class StateManager {
 							case 5: //Bola cuando baja
 							case 4: //Bola cuando sube
 								mapaObstaculos[indicePos[0]][indicePos[1]] = 'O';
-								System.out.println("Bola en " + pos[0] + "-" + pos[1] + " = "+ objeto.itype + " REAL: " + objeto.position.toString());
+								if(verbose)System.out.println("Bola en " + pos[0] + "-" + pos[1] + " = "+ objeto.itype + " REAL: " + objeto.position.toString());
 								break;
 							case 8: // Ladrillos que se rompen x2
 								mapaObstaculos[indicePos[0]][indicePos[1]] = 'X';
@@ -727,7 +958,7 @@ public class StateManager {
 								mapaObstaculos[indicePos[0]][indicePos[1]] = 'X';
 								break;
 							default: //
-								System.out.println("TYPE: " + objeto.itype );
+								if(verbose)System.out.println("TYPE: " + objeto.itype );
 								mapaObstaculos[indicePos[0]][indicePos[1]] = '?';
 								
 								break;
@@ -934,6 +1165,21 @@ public class StateManager {
 		
 	}
 	
+	/*
+	 * Cuenta y actualiza el numero de bloques objetivo en la partida
+	 */
+	private static void cuentaObjetivos(char mapaObstaculos[][])
+	{
+		int objetivos = 0;
+		for (int i = 0; i < numFilas; i++) {
+			for (int j = 0; j < numCol; j++) {
+				if(mapaObstaculos[i][j] == 'X')
+					objetivos++;
+			}
+		}
+		
+		StateManager.numObjetivos = objetivos;
+	}
 // _____________________________________________________________________
 //  METODOS VISUALES
 //_____________________________________________________________________	

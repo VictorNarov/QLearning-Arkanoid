@@ -47,6 +47,7 @@ public class TrainingAgent extends AbstractPlayer {
      */
     public TrainingAgent(StateObservation so, ElapsedCpuTimer elapsedTimer)
     {
+    	StateManager.inicializaJuego();
     	if(verbose) System.out.println("______________________\nCOMIENZA LA PARTIDA\n_______________________");
         randomGenerator = new Random();
         actions = so.getAvailableActions();

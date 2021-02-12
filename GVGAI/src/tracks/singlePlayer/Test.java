@@ -50,7 +50,7 @@ public class Test {
 //		ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0);
 //		
 		
-		boolean training = false; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
+		boolean training = true; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
 		boolean verbose = true; // Mostrar informacion de la partida mientras se ejecuta
 		
 		if(training)	// Crea la tabla Q a random y juega partidas con acciones aleatorias
@@ -60,7 +60,7 @@ public class Test {
 			boolean randomTablaQ = true; // Verdadero: crea la tabla Q con valores random, si no, a cero
 			boolean guardarGrafica = true; // Si queremos guardar una imagen de la grafica Ticks/epoca
 			stateManager = new StateManager(randomTablaQ,false);
-			StateManager.numIteraciones = 200; // Numero de partidas a jugar
+			StateManager.numIteraciones = 50; // Numero de partidas a jugar
 
 			/*
 			 * Grafica Aprendizaje Resultado Score / Epoca
@@ -88,9 +88,12 @@ public class Test {
 				System.out.println("\t\t\t\t\t\t\t\t\t\tlevel: " + levelIdx);
 				
 				double scorePartida = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0)[1];
+				double aciertoPartida = scorePartida/2 / StateManager.numObjetivos * 100; //Acierto porcentual
+				System.out.println("Bloques partida = " + StateManager.numObjetivos);
+				System.out.println("\t\t\tPartida completada al " + aciertoPartida + " %");
 				
 				if(guardarGrafica)
-					Y[StateManager.iteracionActual-1] = scorePartida;
+					Y[StateManager.iteracionActual-1] = aciertoPartida;
 			}
 		
 			stateManager.saveQTable();
@@ -100,9 +103,9 @@ public class Test {
 				
 				graficaTicks.plot(X, Y, "-r", 2.0f, "TICKS");
 				graficaTicks.RenderPlot(); 
-				graficaTicks.title("Resultado partida en Ticks / Epoca de Training");
+				graficaTicks.title("Resultado partida % Acierto / Epoca de Training");
 				graficaTicks.xlim(1, StateManager.numIteraciones);
-				graficaTicks.ylim(1, 550);
+				graficaTicks.ylim(1, 100);
 				graficaTicks.xlabel("Epoca de Training");                  
 				graficaTicks.ylabel("Resultado Ticks partida");                 
 				graficaTicks.saveas(nombreFich, 640, 480);
@@ -120,7 +123,7 @@ public class Test {
 			
 			if(testingAfterTraining) // Probar todos los niveles
 			{
-				visuals = true;
+				visuals = verbose;
 				double[] scorePartidas = new double[7];
 				
 				stateManager = new StateManager("TablaQ.csv", verbose);

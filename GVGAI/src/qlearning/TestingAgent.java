@@ -40,6 +40,7 @@ public class TestingAgent extends AbstractPlayer {
      */
     public TestingAgent(StateObservation so, ElapsedCpuTimer elapsedTimer)
     {
+    	StateManager.inicializaJuego();
     	if(verbose) System.out.println("______________________\nCOMIENZA LA PARTIDA\n_______________________");
         randomGenerator = new Random();
         actions = so.getAvailableActions();
@@ -111,12 +112,12 @@ public class TestingAgent extends AbstractPlayer {
 	  	
 //		if(verbose)
 //			try {
-//				Thread.sleep(10);
+//				Thread.sleep(250);
 //			} catch (InterruptedException e) {
 //				// TODO Auto-generated catch block
 //				e.printStackTrace();
 //			}
-		
+//		
 		
         return action;
     }
