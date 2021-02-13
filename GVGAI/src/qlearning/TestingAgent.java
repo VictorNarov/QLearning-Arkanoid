@@ -9,6 +9,7 @@ import core.game.StateObservation;
 import core.player.AbstractPlayer;
 import ontology.Types;
 import ontology.Types.ACTIONS;
+import qlearning.StateManager.ACCIONES;
 import qlearning.StateManager.ESTADOS;
 
 import tools.ElapsedCpuTimer;
@@ -62,7 +63,7 @@ public class TestingAgent extends AbstractPlayer {
 		
 		//vidaAnterior = so.getAvatarHealthPoints();
 		posBolaAnterior = new Vector2d(-1,-1);
-    	numAccionesPosibles = StateManager.ACCIONES.length;
+    	numAccionesPosibles = StateManager.ACCIONES.values().length;
     }
 
     /**
@@ -103,11 +104,12 @@ public class TestingAgent extends AbstractPlayer {
     	if(verbose) StateManager.pintaQTable(estadoActual);
     	
     	// Criterio seleccion: maxQ
-    	ACTIONS action = StateManager.getAccionMaxQ(estadoActual);
+    	ACCIONES action = StateManager.getAccionMaxQ(estadoActual);
+    	StateManager.actua(action);
     	
     	if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());
    
-    	posBolaAnterior = posBolaActual;
+    	
     	
 	  	
 //		if(verbose)
@@ -119,7 +121,13 @@ public class TestingAgent extends AbstractPlayer {
 //			}
 //		
 		
-        return action;
+		
+		ACTIONS mov = StateManager.getMovimiento(stateObs, posBolaAnterior, this.mapaObstaculos);
+		if(verbose) System.out.println("MOVMIENTO: " + mov);
+		
+		posBolaAnterior = posBolaActual;
+		
+        return mov;
     }
 } 
     

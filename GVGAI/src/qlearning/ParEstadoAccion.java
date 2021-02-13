@@ -1,13 +1,14 @@
 package qlearning;
 
-import ontology.Types.ACTIONS;
+//import ontology.Types.ACTIONS;
 import qlearning.StateManager.ESTADOS;
+import qlearning.StateManager.ACCIONES;
 
 public class ParEstadoAccion{
     public ESTADOS key1;
-    public ACTIONS key2;
+    public ACCIONES key2;
  
-    public ParEstadoAccion(ESTADOS key1, ACTIONS key2) {
+    public ParEstadoAccion(ESTADOS key1, ACCIONES key2) {
         this.key1 = key1;
         this.key2 = key2;
     }

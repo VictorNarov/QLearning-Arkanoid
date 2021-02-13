@@ -39,7 +39,7 @@ public class Test {
 		String recordActionsFile = null;// "actions_" + games[gameIdx] + "_lvl"
 	
 		
-		int levelIdx = 5; // level names from 0 to 4 (game_lvlN.txt).
+		int levelIdx = 2; // level names from 0 to 4 (game_lvlN.txt).
 		String level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 		StateManager stateManager;
 		
@@ -50,7 +50,7 @@ public class Test {
 //		ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0);
 //		
 		
-		boolean training = false; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
+		boolean training = true; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
 		boolean verbose = true; // Mostrar informacion de la partida mientras se ejecuta
 		
 		if(training)	// Crea la tabla Q a random y juega partidas con acciones aleatorias
@@ -60,7 +60,7 @@ public class Test {
 			boolean randomTablaQ = true; // Verdadero: crea la tabla Q con valores random, si no, a cero
 			boolean guardarGrafica = true; // Si queremos guardar una imagen de la grafica Ticks/epoca
 			stateManager = new StateManager(randomTablaQ,false);
-			StateManager.numIteraciones = 50; // Numero de partidas a jugar
+			StateManager.numIteraciones = 100; // Numero de partidas a jugar
 
 			/*
 			 * Grafica Aprendizaje Resultado Score / Epoca
@@ -87,10 +87,10 @@ public class Test {
 				System.out.println("\t\t\t\t\t\t\t\t\t\tIteración " + StateManager.iteracionActual + " / "+ StateManager.numIteraciones);
 				System.out.println("\t\t\t\t\t\t\t\t\t\tlevel: " + levelIdx);
 				
-				double scorePartida = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0)[1];
-				double aciertoPartida = scorePartida/2 / StateManager.numObjetivos * 100; //Acierto porcentual
+				ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0);
+				double aciertoPartida = (double)StateManager.numObjetivosAcertados / (double)StateManager.numObjetivos *100;
 				System.out.println("Bloques partida = " + StateManager.numObjetivos);
-				System.out.println("\t\t\tPartida completada al " + aciertoPartida + " %");
+				System.out.println("\t\t\tPartida completada al " + aciertoPartida + " % [" +StateManager.numObjetivosAcertados +"/"+StateManager.numObjetivos+"]");
 				
 				if(guardarGrafica)
 					Y[StateManager.iteracionActual-1] = aciertoPartida;
@@ -128,21 +128,21 @@ public class Test {
 				
 				stateManager = new StateManager("TablaQ.csv", verbose);
 				for (int i = 0; i <= 4; i++) {
-				
 					levelIdx = i; // level names from 0 to 4 (game_lvlN.txt).
 					level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
-					scorePartidas[i] = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0)[1];
+					ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0);
+					scorePartidas[i] = Math.round((double)StateManager.numObjetivosAcertados / (double)StateManager.numObjetivos *100);
 				}
 				
 				System.out.println("____________________________________________________");
 				System.out.println("____________ ESTADÍSTICAS PARTIDAS _________________");
 				double total = 0;
 				for(int i = 0; i <= 4; i++) {
-						System.out.println("SCORE JUEGO " + i + " =\t"+ scorePartidas[i]);
+						System.out.println("% JUEGO " + i + " =\t"+ scorePartidas[i]);
 						total += scorePartidas[i];
 				}
 				
-				System.out.println("PUNTUACIÓN MEDIA =\t" + total / 5.0);
+				System.out.println("PUNTUACIÓN MEDIA =" + total / 5.0);
 				System.out.println("____________________________________________________");
 				
 			}

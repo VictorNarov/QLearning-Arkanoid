@@ -10,6 +10,7 @@ import core.game.StateObservation;
 import core.player.AbstractPlayer;
 import ontology.Types;
 import ontology.Types.ACTIONS;
+import qlearning.StateManager.ACCIONES;
 import qlearning.StateManager.ESTADOS;
 import tools.Vector2d;
 
@@ -69,7 +70,7 @@ public class TrainingAgent extends AbstractPlayer {
 		
 		//vidaAnterior = so.getAvatarHealthPoints();
 		posBolaAnterior = new Vector2d(-1, -1);
-    	numAccionesPosibles = StateManager.ACCIONES.length;
+    	numAccionesPosibles = StateManager.ACCIONES.values().length;
     }
     
     /**
@@ -85,6 +86,10 @@ public class TrainingAgent extends AbstractPlayer {
     	// -----------------------------------------------------------------------
     	//int vidaActual = stateObs.getAvatarHealthPoints();
 
+    	//System.out.println(stateObs.getGameTick());
+    	
+		if(StateManager.contadorNIL >= 100)
+			return ACTIONS.ACTION_ESCAPE;
     	
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
     	int[] posJugador = StateManager.getIndiceMapa(pos); // Indice del mapa
@@ -105,8 +110,11 @@ public class TrainingAgent extends AbstractPlayer {
     	estadoActual.incrementa();
     	if(verbose) System.out.println("Estado actual: " + estadoActual.toString());
     	
+
+    	
     	// Captura el estado en ese momento de ejecución //
-		/*if ( !StateManager.diccionarioEstadoCaptura.get(estadoActual) ) {
+    	
+		if ( !StateManager.diccionarioEstadoCaptura.get(estadoActual) ) {
 			try {
 				Thread.sleep(200);
 				StateManager.capturaEstado(estadoActual.name());
@@ -114,7 +122,7 @@ public class TrainingAgent extends AbstractPlayer {
 			} catch(Exception ex) {
 				System.out.println("Fallo al realizar la captura. " + ex.getMessage());
 			}
-		}*/
+		}
     	
     	// -----------------------------------------------------------------------
     	// 							ALGORITMO Q LEARNING
@@ -123,7 +131,7 @@ public class TrainingAgent extends AbstractPlayer {
     	if(verbose)StateManager.pintaQTable(estadoActual);
     	
     	// Seleccionar una entre las posibles acciones desde el estado actual
-    	ACTIONS action;
+    	ACCIONES action;
     	
     	
 //    	// Criterio de selección: random hasta 1/3 iteraciones
@@ -136,7 +144,7 @@ public class TrainingAgent extends AbstractPlayer {
     	if(randomPolicy) {
 	    	
 	        int index = randomGenerator.nextInt(numAccionesPosibles);
-	        action = StateManager.ACCIONES[index];
+	        action = StateManager.ACCIONES.values()[index];
     	}
     	else // Criterio seleccion: maxQ
     	{
@@ -145,8 +153,8 @@ public class TrainingAgent extends AbstractPlayer {
 
     	if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());
         
-        // Calcular el siguiente estado habiendo elegido esa acción
-    	ESTADOS estadoSiguiente = StateManager.getEstadoFuturo(stateObs, action);
+        // Calcular el siguiente estado habiendo eleggetEstadoFuturoido esa acción
+    	ESTADOS estadoSiguiente = StateManager.getEstadoFuturo(stateObs, posBolaAnterior, mapaObstaculos);
     	if(verbose) System.out.println("ESTADO SIGUIENTE: " + estadoSiguiente.toString());
     
         // Using this possible action, consider to go to the next state
@@ -161,12 +169,12 @@ public class TrainingAgent extends AbstractPlayer {
         //System.out.println(value);
         // Actualizamos la tabla Q
         StateManager.Q.put(new ParEstadoAccion(estadoActual, action), value);
- 	
-		 
+ 		 
 		
 		if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());
+		StateManager.actua(action);
 		
-		posBolaAnterior = posBolaActual;
+		
 		
 	  	//if(stateObs.isGameOver()) this.saveQTable(); //Guardamos la tablaQ si termina el juego
 	  	
@@ -178,12 +186,19 @@ public class TrainingAgent extends AbstractPlayer {
 //				e.printStackTrace();
 //			}
 		
+		ACTIONS mov = StateManager.getMovimiento(stateObs, posBolaAnterior, this.mapaObstaculos);
+		if(verbose) System.out.println("MOVMIENTO: " + mov);
 		
-        return action;
+		posBolaAnterior = posBolaActual;
+		
+    	if(mov.equals(stateObs.getAvatarLastAction())) StateManager.contadorNIL++;
+    	else StateManager.contadorNIL = 0;
+		
+        return mov;
     }
 	
 	private double maxQ(ESTADOS s) {
-        ACTIONS[] actions = StateManager.ACCIONES;
+        ACCIONES[] actions = StateManager.ACCIONES.values();
         double maxValue = Double.MIN_VALUE;
         
         for (int i = 0; i < actions.length; i++) {

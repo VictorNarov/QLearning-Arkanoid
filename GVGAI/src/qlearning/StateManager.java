@@ -23,14 +23,17 @@ import tools.Vector2d;
 public class StateManager {
 	public static double xmax = 519;
 	public static double xmin = 25;
-	private static double velocidadAnterior=0;
+	//private static double velocidadAnterior=0;
 	public static boolean verbose = false;
 	//Variables simulacion training
 	public static int numIteraciones;
 	public static int iteracionActual;
 	Random randomGenerator;
 	
+	public static int contadorNIL = 0;
+	
 	public static int numObjetivos;
+	public static int numObjetivosAcertados=0;
 	
 	//Variables comunes a varias clases
 	public static int numCol;
@@ -41,10 +44,17 @@ public class StateManager {
 	
 	/* Contenedor de constantes para identificar los estados */
 	public static enum ESTADOS {
-		SIN_BOLA(0),
-		BOLA_IZQDA(0),
-		BOLA_DCHA(0),
-		BOLA_CENTRO(0),
+		ATRAPADO_IZQDA(0),
+		ATRAPADO_DCHA(0),
+		ATRAPADO_MEDIO(0),
+		ATRAPADO_IZQDA_CERCA(0),
+		ATRAPADO_DCHA_CERCA(0),
+		CONSIGUE_PUNTOS(0),
+		NO_CONSIGUE_PUNTOS(0),
+		HUECO_DCHA(0),
+		HUECO_IZQDA(0),
+		HUECO_MEDIO(0),
+		GAME_OVER(0),
 		NIL(0);
 
 		private int contador; //Cuenta cada vez que se percibe ese estado
@@ -69,29 +79,38 @@ public class StateManager {
 		}
 	}
 	
+	public static enum ACCIONES
+	{
+		NIL,		//No cambia el parámetro desplazamiento
+		DESP_IZQDA,	//Ajusta el desplazamiento al valor minimo
+		DESP_DCHA,	//Ajusta el desplazamiento al valor máximmo
+		DESP_MEDIO,	//Valor intermedio
+		DESP_ALEATORIO	//Valor aleatorio
+	}
+	
 	// Acciones posibles
-	public static final ACTIONS[] ACCIONES = {ACTIONS.ACTION_USE, ACTIONS.ACTION_LEFT, ACTIONS.ACTION_RIGHT, ACTIONS.ACTION_NIL};
+	public static final ACTIONS[] MOVIMIENTOS = {ACTIONS.ACTION_USE, ACTIONS.ACTION_LEFT, ACTIONS.ACTION_RIGHT, ACTIONS.ACTION_NIL};
 	
 	//Direcciones
-	private enum DIRECCIONES{IZQDA, DCHA, MEDIO};
+	public enum DIRECCIONES{IZQDA, DCHA, MEDIO};
 	
 	public static HashMap<ParEstadoAccion, Integer> R; // TABLA R
 	public static HashMap<ParEstadoAccion, Double> Q; // TABLA Q
 		
 	/* Variables */
 	//private static char mapaObstaculos[][];
-	private static Vector2d posActual;
+	//private static Vector2d posActual;
 	private int numEstados = ESTADOS.values().length;
-	private int numAcciones = ACCIONES.length;
+	private int numAcciones = ACCIONES.values().length;
 	
 	// Variables prediccion trayectoria
 	private static double desplazamiento = 35;
-	private static double scoreAnterior = 0;
-	private static double pendienteAnterior;
-	private static int numVecesSinPuntos = 0;
-	private static DIRECCIONES posReboteLadrillo=DIRECCIONES.MEDIO;
+	static double scoreAnterior = 0;
+	static double pendienteAnterior;
+	static int numVecesSinPuntos = 0;
+	static DIRECCIONES posReboteLadrillo=DIRECCIONES.MEDIO;
 	private static boolean primeraVez = true;
-	private static ArrayList<Integer> huecos;
+	static ArrayList<Integer> huecos;
 	
 	public StateManager(boolean randomTablaQ, boolean verbose) {
 		if(verbose) System.out.println("Inicializando tablas Q y R.....");
@@ -125,18 +144,19 @@ public class StateManager {
 	 */
 	public static void inicializaJuego()
 	{
-		velocidadAnterior=0;
+		//velocidadAnterior=0;
 		xmax = 519;
 		xmin = 25;
 		desplazamiento = 35;
 		scoreAnterior = 0;
 		numVecesSinPuntos = 0;
+		contadorNIL = 0;
 		primeraVez = true;
 	}
 	
 	public static void capturaEstado(String fileName) throws Exception {
 		   Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-		   Rectangle screenRectangle = new Rectangle(8,2, 240, 390);
+		   Rectangle screenRectangle = new Rectangle(8,2, 585, 535);
 		   
 		   Robot robot = new Robot();
 		   BufferedImage image = robot.createScreenCapture(screenRectangle);
@@ -154,41 +174,37 @@ public class StateManager {
 		// excepto la de obtener gasolina y esquivar obstaculos, que serán premiadas
 		
 		for (ESTADOS estado: ESTADOS.values()) 
-			for(ACTIONS accion : ACCIONES)
+			for(ACCIONES accion : ACCIONES.values())
 			{
 				int valorR = 0;
 				
-//				if(estado.equals(ESTADOS.BOLA_CENTRO))
-//					valorR = -50;
-//				
-//				if(estado.equals(ESTADOS.BOLA_IZQDA))
-//					valorR = -50;
-//				
-//				if(estado.equals(ESTADOS.BOLA_DCHA))
-//					valorR = -50;
-//				
+				if(estado.toString().startsWith("ATRAPADO"))
+					valorR = -50;
+								
 //				if(estado.equals(ESTADOS.NIL))
 //					valorR = -50;
 				
+				if(estado.equals(ESTADOS.GAME_OVER))
+					valorR = -100;
 				
 			
 				
 				R.put(new ParEstadoAccion(estado,accion), valorR);
 			}
 		// Castigamos no ir hacia la bola
-		R.put(new ParEstadoAccion(ESTADOS.BOLA_IZQDA,ACTIONS.ACTION_RIGHT), -100);
-		R.put(new ParEstadoAccion(ESTADOS.BOLA_DCHA,ACTIONS.ACTION_LEFT), -100);
+		//R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_DCHA), -100);
+		//R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_IZQDA), -100);
 		
 		// Premiamos ir hacia la bola
-		R.put(new ParEstadoAccion(ESTADOS.BOLA_IZQDA,ACTIONS.ACTION_LEFT), 150);
-		R.put(new ParEstadoAccion(ESTADOS.BOLA_DCHA,ACTIONS.ACTION_RIGHT), 150);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_IZQDA), 150);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_DCHA), 150);
 		
 		// Premiamos iniciar el juego
-		R.put(new ParEstadoAccion(ESTADOS.SIN_BOLA,ACTIONS.ACTION_USE), 100);
+		//R.put(new ParEstadoAccion(ESTADOS.SIN_BOLA,ACTIONS.ACTION_USE), 100);
 		
 		// Premiamos que se quede en el centro si la bola está alineada
-		R.put(new ParEstadoAccion(ESTADOS.BOLA_CENTRO,ACTIONS.ACTION_NIL), 100);
-		R.put(new ParEstadoAccion(ESTADOS.NIL,ACTIONS.ACTION_NIL), 100);
+		R.put(new ParEstadoAccion(ESTADOS.CONSIGUE_PUNTOS, ACCIONES.NIL), 500);
+		R.put(new ParEstadoAccion(ESTADOS.NIL, ACCIONES.NIL), 100);
 	}
 	
 	/*
@@ -201,13 +217,13 @@ public class StateManager {
 		if(random) {
 			/* Inicializamos todos los valores Q a random */
 			for (ESTADOS estado: ESTADOS.values()) 
-				for(ACTIONS accion : ACCIONES)			
+				for(ACCIONES accion : ACCIONES.values())			
 					Q.put(new ParEstadoAccion(estado,accion), (randomGenerator.nextDouble()+1) * 50);
 		}
 		else {
 			/* Inicializamos todos los valores Q a cero */
 			for (ESTADOS estado: ESTADOS.values()) 
-				for(ACTIONS accion : ACCIONES) {
+				for(ACCIONES accion : ACCIONES.values()) {
 					Q.put(new ParEstadoAccion(estado,accion), 0.0);
 					//System.out.println(estado.toString() + "," + accion.toString() + " = 0.0");
 				}
@@ -237,7 +253,7 @@ public class StateManager {
 			buffer.append("ESTADOS");
 			buffer.append(";");
 			
-			for( ACTIONS accion : StateManager.ACCIONES ) {
+			for( ACCIONES accion : StateManager.ACCIONES.values() ) {
 				buffer.append( accion.toString() );
 				buffer.append(";");
 			}
@@ -248,7 +264,7 @@ public class StateManager {
 				buffer.append(estado.toString());
 				buffer.append(";");
 
-				for( ACTIONS accion : StateManager.ACCIONES ) {
+				for( ACCIONES accion : StateManager.ACCIONES.values() ) {
 					double value = StateManager.Q.get(new ParEstadoAccion(estado, accion));
 					
 					buffer.append( '"' + Double.toString(value).replace('.', ',') + '"');
@@ -281,11 +297,11 @@ public class StateManager {
 			String linea = fichero.nextLine();
 			String [] cabecera = linea.split(";");
 			
-			ACTIONS[] actions = new ACTIONS[cabecera.length];
+			ACCIONES[] actions = new ACCIONES[cabecera.length];
 						
 			for(int i = 1; i<cabecera.length; i++)
 			{
-				for(ACTIONS a : ACCIONES)
+				for(ACCIONES a : ACCIONES.values())
 				{
 					if(verbose) System.out.println("NOMBRE ACCION: " + a.toString());
 					if(a.toString().equals(cabecera[i])) {
@@ -320,10 +336,10 @@ public class StateManager {
 		}
 	}
 
-	public static ACTIONS getAccionMaxQ(ESTADOS s)
+	public static ACCIONES getAccionMaxQ(ESTADOS s)
 	{
-		 ACTIONS[] actions = StateManager.ACCIONES; // Acciones posibles
-         ACTIONS accionMaxQ = ACTIONS.ACTION_NIL;
+		 ACCIONES[] actions = StateManager.ACCIONES.values(); // Acciones posibles
+         ACCIONES accionMaxQ = ACCIONES.NIL;
          
          double maxValue = Double.NEGATIVE_INFINITY; // - inf
 	        
@@ -343,7 +359,7 @@ public class StateManager {
 	        if(maxValue == 0) // Inicialmente estan a 0, una random
 	        {
 	        	
-        	  int index = new Random().nextInt(StateManager.ACCIONES.length-1);
+        	  int index = new Random().nextInt(StateManager.ACCIONES.values().length-1);
 	          accionMaxQ = actions[index];
 		        
 	        }
@@ -355,25 +371,114 @@ public class StateManager {
 //  METODOS PERCEPCION ESTADOS
 //_____________________________________________________________________
 
-	public static ESTADOS getEstadoFuturo(StateObservation obs, ACTIONS action)
+	public static ESTADOS getEstadoFuturo(StateObservation obs, Vector2d posBolAnt, char[][] mapaObs)
 	{	
-		Vector2d posBola = getPosBolaReal(obs);
-		obs.advance(action);
-		return getEstado(obs, posBola, getMapaObstaculos(obs));
+		//Instancia para predecir el estado sin alterar las variables actuales de StateManager
+		StatePredict statePredict = new StatePredict(); 
+		ESTADOS estado = ESTADOS.NIL;
+		int contador = 0;
+		//System.out.println("HOLAAA");
+		do
+		{
+			Vector2d posBola = getPosBolaReal(obs);
+			//mapaObs = getMapaObstaculos(obs);
+			//StateManager.pintaMapaObstaculos(mapaObs);
+			estado = statePredict.getEstado(obs, posBola,mapaObs);
+			ACTIONS action = statePredict.getMovimiento(obs, posBolAnt, mapaObs);
+			obs.advance(action);
+			
+			posBolAnt = posBola;
+			//mapaObs = getMapaObstaculos(obs);
+			
+			contador++;
+			//System.out.println(contador + "\t" + estado + "\t" + action + " equals=" + estado.equals(ESTADOS.NIL) + " over = " + obs.isGameOver());
+		}while(estado.equals(ESTADOS.NIL) && !obs.isGameOver() && contador <= 500 && estado.toString().startsWith("HUECO"));
+		
+		 //System.out.println("Calculado estado futuro en "+contador+" iteraciones: "+estado);
+		
+		
+		return estado;
 	}
 	
 	public static ESTADOS getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
+		ESTADOS estado = ESTADOS.NIL;
+		
+		if(obs.isGameOver())
+			return ESTADOS.GAME_OVER;
+		
+
+		
 		if(primeraVez) { //Localiza los huecos en las filas de osbtauclos del mapa
 			 huecos = getHuecos(mapaObstaculos);
 			 if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
 			 cuentaObjetivos(mapaObstaculos); //Actualiza el numero de objetivos de este mapa
+			 numObjetivosAcertados=0;
 			 primeraVez = false;
 		}
-
 		
+		
+		Vector2d posBola = getPosBolaReal(obs);
+		Vector2d posActual = obs.getAvatarPosition();
+
+			
+		golpeaMuro(posBola, posBolaAnterior);
+		
+		// Percibimos el estado segun el hueco si lo hay
+		if(huecos.size() > 0)
+			estado = getEstadoDirHueco(mapaObstaculos);
+		
+		
+		if(golpeaBola(posBola, posBolaAnterior))
+		{
+			if(verbose) System.out.println("Golpea la bola");
+			
+			double scoreActual = obs.getGameScore();
+			if(scoreActual == scoreAnterior) // No ha roto ningun ladrillo
+			{
+				if(verbose) System.out.println("No ha roto ningun ladrillo");
+				numVecesSinPuntos++;
+				
+				if(numVecesSinPuntos >= 2) {
+					if(verbose)System.out.println("Se queda pillado más de 2 veces rebotando en "+posReboteLadrillo.toString());
+					//numVecesSinPuntos=0;
+					if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x <= 2*xmax/10)
+						return ESTADOS.ATRAPADO_IZQDA_CERCA;
+					else if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x > 2*xmax/10)
+						return ESTADOS.ATRAPADO_IZQDA;
+					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x >= 8*xmax/10 )
+						return ESTADOS.ATRAPADO_DCHA_CERCA;
+					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x < 8*xmax/10 )
+						return ESTADOS.ATRAPADO_DCHA;
+					else
+						return ESTADOS.ATRAPADO_MEDIO;				
+				}
+				else
+					return ESTADOS.NO_CONSIGUE_PUNTOS;
+		
+			} // Gana puntos
+			else {
+				if(verbose) System.out.println("Aumenta la puntuación!");
+				numVecesSinPuntos = 0;
+
+				numObjetivosAcertados+= (obs.getGameScore()-scoreAnterior) /2;
+
+				scoreAnterior = scoreActual;
+				return ESTADOS.CONSIGUE_PUNTOS;
+				
+				
+			}
+				
+		}
+		
+		return estado;
+		
+	}
+	
+	public static ACTIONS getMovimiento(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
+	{
 		//int vidaActual = obs.getAvatarHealthPoints();
-		posActual = obs.getAvatarPosition();
+		Vector2d posActual = obs.getAvatarPosition();
 		//double desplazamiento = ((double)70*obs.getGameTick()) / 2000.0;
 
 
@@ -395,50 +500,16 @@ public class StateManager {
 		double[] celdaPosActual = getCeldaPreciso(posActual, obs.getWorldDimension());
 		
 		double velocidadJugador = obs.getAvatarOrientation().x*obs.getAvatarSpeed();
-		double aceleracion = velocidadJugador - velocidadAnterior;
-		velocidadAnterior = velocidadJugador;
+		//double aceleracion = velocidadJugador - velocidadAnterior;
+		//velocidadAnterior = velocidadJugador;
 		
 		ACTIONS ultimaAccion = obs.getAvatarLastAction();
 		
 		golpeaMuro(posBola, posBolaAnterior);
 		
-		if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
+		//if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
 		
-		if(golpeaBola(posBola, posBolaAnterior))
-		{
-			if(verbose) System.out.println("Golpea la bola");
-			
-			double scoreActual = obs.getGameScore();
-			if(scoreActual == scoreAnterior) // No ha roto ningun ladrillo
-			{
-				if(verbose) System.out.println("No ha roto ningun ladrillo");
-				numVecesSinPuntos++;
-				
-				if(numVecesSinPuntos >= 3) {
-					if(verbose)System.out.println("Se queda pillado más de 3 veces rebotando en "+posReboteLadrillo.toString());
-					
-					if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x <= 2*xmax/10)
-						desplazamiento = 0;
-					else if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x > 2*xmax/10)
-						desplazamiento = 70;
-					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x >= 8*xmax/10 )
-							desplazamiento = 70;
-					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x < 8*xmax/10 )
-						desplazamiento = 0;
-					else
-						desplazamiento = new Random().nextInt(70);					
-				}
-					
-				
-			}
-			else {
-				if(verbose) System.out.println("Aumenta la puntuación!");
-				numVecesSinPuntos = 0;
-				scoreAnterior = scoreActual;
-				if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
-			}
-				
-		}
+		
 		
 		//if(Math.abs(pendienteAnterior) >= 1)
 		//	desplazamiento = 0;
@@ -461,12 +532,10 @@ public class StateManager {
 		if(verbose) System.out.printf("BolaAnterior = \t{%f, %f}\nBolaActual = \t{%f, %f} \n", posBolaAnterior.x,posBolaAnterior.y,posBola.x,posBola.y);
 		if(verbose) System.out.println("VELOCIDAD = " + velocidadJugador);
 		if(verbose) System.out.println("ULTIMA ACT = " + ultimaAccion);
-		if(verbose) System.out.println("ACELERACION = " + aceleracion);
+		//if(verbose) System.out.println("ACELERACION = " + aceleracion);
 		if(verbose) System.out.println("VELOCIDAD BOLA= " + getVelocidadBola(posBola, posBolaAnterior));
 		
-		
-		
-		
+			
 		
 		// Si hay bola
 		if(hayBola(obs))
@@ -481,35 +550,50 @@ public class StateManager {
 				double ColSueloBola = getColPredict(obs, posBolaAnterior);
 				
 				
-				return getEstadoTrayectoriaBola(ColSueloBola, velocidadJugador, aceleracion, ultimaAccion);
+				return getMovimientoTrayectoriaBola(posActual,ColSueloBola, velocidadJugador, ultimaAccion);
 			}
 			else //Bola sube
 			{
 				
-				return getEstadoBola(obs);
+				return getMovimientoBola(obs);
 			}
 					
 		}
 		else
-			return ESTADOS.SIN_BOLA;
+			return ACTIONS.ACTION_USE;
 			
 	}
-	
-	private static ESTADOS getEstadoBola(StateObservation obs)
+
+	static ACTIONS getMovimientoBola(StateObservation obs)
 	{
-		Vector2d posBola = getPosBolaReal(obs);
-		
+		Vector2d posBola = getPosBolaReal(obs);	
+		Vector2d posActual = obs.getAvatarPosition();
 		
 		if(posBola.x == posActual.x)
-			return ESTADOS.BOLA_CENTRO;
+			return ACTIONS.ACTION_NIL;
 		else if(posBola.x > posActual.x)
-			return ESTADOS.BOLA_DCHA;
+			return ACTIONS.ACTION_RIGHT;
 		else
-			return ESTADOS.BOLA_IZQDA;
+			return ACTIONS.ACTION_LEFT;
 
 	}
 	
-	private static boolean hayBola(StateObservation obs)
+	/*
+	 * Aplica la accón pasada por parámetro
+	 */
+	public static void actua(ACCIONES action)
+	{
+		if(action.equals(ACCIONES.DESP_IZQDA))
+			desplazamiento = 0;
+		else if(action.equals(ACCIONES.DESP_DCHA))
+			desplazamiento = 70;
+		else if(action.equals(ACCIONES.DESP_MEDIO))
+			desplazamiento = 35;
+		else if(action.equals(ACCIONES.DESP_ALEATORIO))
+			desplazamiento = new Random().nextInt(70);
+	}
+	
+	static boolean hayBola(StateObservation obs)
 	{
 		Observation bola; boolean encontrado = false;
 		
@@ -584,12 +668,12 @@ public class StateManager {
 			return bola.position;
 	}
 	
-	private static boolean estaBajandoBola(double[] posBola, double[] posBolaAnterior)
+	static boolean estaBajandoBola(double[] posBola, double[] posBolaAnterior)
 	{
 		return (posBola[0] > posBolaAnterior[0]);
 	}
 	
-	private static double getPendienteBola(Vector2d posBola, Vector2d posBolaAnterior)
+	static double getPendienteBola(Vector2d posBola, Vector2d posBolaAnterior)
 	{
 		double bolaX = posBola.x;
 		double bolaY = (-1) * posBola.y;
@@ -690,65 +774,40 @@ public class StateManager {
 
 	}
 	
-//	private static int getColCorteBola(double[] posBola, double[] posBolaAnterior)
-//	{
-//		/*
-//		 * Recta determinada por los puntos P1{f1,c1} - P2{f1,c2}
-//		 * Ecuación punto-pendiente
-//		 * X = FILA ; Y = COL
-//		 * Pendiente m = (c2-c1) / (f2-f1)
-//		 * 
-//		 * C(F) = c1 + m*(F-f1)
-//		 */
-//
-//		int colMax = 40;
-//		int filaMax = 36;
-//		
-//		
-//		double f1 = posBola[0]; double c1 = posBola[1];
-//		double f2 = posBolaAnterior[0]; double c2 = posBolaAnterior[1];
-//		
-//		if(verbose) System.out.printf("P1 = {%f, %f} - P2 = {%f, %f} \n", f1,c1,f2,c2);
-//		
-//		double m = getPendienteBola(posBola,posBolaAnterior);
-//		
-//		if(verbose) System.out.println("m = ("+f2 + "-" + f1 + ")/("+c2 +"-"+c1+")= "+ m);
-//		
-//		double corteOX = m*(0-f1) + c1;
-//		if(verbose) System.out.println("CorteOX= "+ corteOX);
-//		// Rebota en la pared izquierda
-//		if(corteOX < 0)
-//		{
-//			if(verbose) System.out.println("Rebota con pared izquierda");
-//			// Componente x Punto de corte con el eje y 
-//			double filaCorteOY = -1 * c1 / m + f1;
-//			m = -1 * m; //Pendiente al rebotar con la pared	
-//			
-//			corteOX = m * (0-filaCorteOY);	
-//		}
-//		else if(corteOX > colMax) // Rebota en la pared derecha
-//		{
-//			if(verbose) System.out.println("Rebota con pared derecha");
-//			//Componente x Punto de corte con el borde derecho
-//			double filaCorteBorde = (colMax - c1) / m + f1;
-//			m = -1 * m; //Pendiente al rebotar con la pared	
-//			
-//			corteOX = m * (0-filaCorteBorde) + colMax;
-//		}
-//		
-//		// Guardamos la pendiente para saber de donde nos viene la bola
-//		pendienteAnterior = m;
-//		
-//		//double angulo = Math.toDegrees(Math.atan(m));
-//		
-//		
-//		
-//		
-//		return (int)Math.floor(corteOX);
-//		
-//	}
 
-	private static double getColPredict(StateObservation obs, Vector2d posBolaAnterior)
+	static ESTADOS getEstadoDirHueco(char mapaObstaculos[][])
+	{
+		ESTADOS dirHueco = ESTADOS.NIL;
+		double centroideObjetivos[] = getCentroideObjetivos(mapaObstaculos);
+		double minDistancia = Double.POSITIVE_INFINITY;
+		int huecoMenorDistancia = -1;
+		
+		for(int hueco : huecos) {
+			double distancia = Math.pow(0 - centroideObjetivos[0], 2) + Math.pow(hueco - centroideObjetivos[1], 2);
+			
+			if(distancia < minDistancia)
+			{
+				minDistancia = distancia;
+				huecoMenorDistancia = hueco;
+			}
+		}
+		
+		int tercio = numCol / 3;
+		if(huecoMenorDistancia <= tercio)
+			dirHueco = ESTADOS.HUECO_IZQDA;
+		
+		else if(huecoMenorDistancia > tercio && huecoMenorDistancia < 2*tercio)
+			dirHueco = ESTADOS.HUECO_MEDIO;
+					
+		else dirHueco = ESTADOS.HUECO_DCHA;
+					
+		if(verbose) System.out.println("Hueco más cercano encontrado en la parte: " + dirHueco);
+		return dirHueco;
+				
+
+	}
+	
+	static double getColPredict(StateObservation obs, Vector2d posBolaAnterior)
 	{
 		Vector2d posBola = getPosBolaReal(obs);
 		double bolaX = posBola.x;
@@ -811,7 +870,7 @@ public class StateManager {
 		
 	}
 	
-	private static ESTADOS getEstadoTrayectoriaBola(double colCorteBola, double velocidadJugador, double aceleracion, ACTIONS ultimaAccion)
+	static ACTIONS getMovimientoTrayectoriaBola(Vector2d posActual, double colCorteBola, double velocidadJugador, ACTIONS ultimaAccion)
 	{
 		double colJugador = posActual.x;
 		if(verbose)System.out.println(colJugador + ":::::" + colCorteBola);
@@ -826,23 +885,22 @@ public class StateManager {
 		
 		if(colJugador >= colCorteBola-20 && colJugador <= colCorteBola+20 ) {
 			if (velocidadJugador > 5)
-				return ESTADOS.BOLA_IZQDA;
+				return ACTIONS.ACTION_LEFT;
 			else if (velocidadJugador < -5)
-				return ESTADOS.BOLA_DCHA;
+				return ACTIONS.ACTION_RIGHT;
 			else
-				return ESTADOS.BOLA_CENTRO;
+				return ACTIONS.ACTION_NIL;
 		}
 		else if( colCorteBola < xmin || colCorteBola > xmax) {
 			if(verbose)System.out.println("xmin: " + xmin + " xmax: " + xmax);
-			return ESTADOS.NIL;
+			return ACTIONS.ACTION_NIL;
 		}
 			
-		
 		else if(colJugador < colCorteBola)
-			return ESTADOS.BOLA_DCHA;
+			return ACTIONS.ACTION_RIGHT;
 		
 		else
-			return ESTADOS.BOLA_IZQDA;
+			return ACTIONS.ACTION_LEFT;
 	}
 	
 	private static double getVelocidadBola(Vector2d posBola, Vector2d posBolaAnterior)
@@ -850,12 +908,15 @@ public class StateManager {
 		return Math.sqrt(Math.pow((posBola.x - posBolaAnterior.x), 2) + Math.pow((posBola.y - posBolaAnterior.y), 2));
 	}
 
-	private static boolean golpeaBola(Vector2d posBola, Vector2d posBolaAnterior)
+	static boolean golpeaBola(Vector2d posBola, Vector2d posBolaAnterior)
 	{
 		return(posBola.y >= posBolaAnterior.y  && posBola.y>=420 && posBola.y<=440);
 			
 	}
 	
+	/*
+	 * Actualiza la variable posReboteLadrillo con la direccion donde la bola cambió de dirección por última vez
+	 */
 	private static void golpeaMuro(Vector2d posBola, Vector2d posBolaAnterior)
 	{
 		if(getPendienteBola(posBola,posBolaAnterior) != pendienteAnterior && posBola.y <= 425) {
@@ -956,7 +1017,7 @@ public class StateManager {
 								mapaObstaculos[indicePos[0]][indicePos[1]] = 'X';
 								break;
 							default: //
-								if(verbose)System.out.println("TYPE: " + objeto.itype );
+								//if(verbose)System.out.println("TYPE: " + objeto.itype );
 								mapaObstaculos[indicePos[0]][indicePos[1]] = '?';
 								
 								break;
@@ -1183,7 +1244,7 @@ public class StateManager {
 //_____________________________________________________________________	
 	public static void pintaQTable(ESTADOS s)
 	{
-		ACTIONS[] actions = StateManager.ACCIONES;
+		ACCIONES[] actions = StateManager.ACCIONES.values();
 
         System.out.println("----------Q TABLE -----------------");
         
@@ -1207,7 +1268,7 @@ public class StateManager {
         System.out.println("____________________ Q TABLE RESUMEN ______________________");
         
         for (int i = 0; i < estados.length; i++) {
-        	ACTIONS accion = getAccionMaxQ(estados[i]);
+        	ACCIONES accion = getAccionMaxQ(estados[i]);
         	double q = StateManager.Q.get(new ParEstadoAccion(estados[i], accion));
         	
         	 System.out.println("maxQ<"+ estados[i].toString() + "," + accion.toString() +"> = "+ q);
