@@ -90,6 +90,7 @@ public class TrainingAgent extends AbstractPlayer {
     	
 		if(StateManager.contadorNIL >= 100)
 			return ACTIONS.ACTION_ESCAPE;
+		
     	
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
     	int[] posJugador = StateManager.getIndiceMapa(pos); // Indice del mapa
@@ -98,6 +99,8 @@ public class TrainingAgent extends AbstractPlayer {
     	if(verbose) System.out.println("POSICION = " + posJugador[0] + "-" + posJugador[1]);   	
     	
     	this.mapaObstaculos = StateManager.getMapaObstaculos(stateObs); // Actualizamos el mapa percibido
+    	
+    	
 //    	mapaObstaculos[posJugador[0]][posJugador[1]] = '='; // Marcamos la posicion del jugador
 //    	mapaObstaculos[posJugador[0]][posJugador[1]+1] = '=';
 //    	mapaObstaculos[posJugador[0]][posJugador[1]-1] = '=';
@@ -135,10 +138,10 @@ public class TrainingAgent extends AbstractPlayer {
     	
     	
 //    	// Criterio de selección: random hasta 1/3 iteraciones
-//    	if(StateManager.iteracionActual < StateManager.numIteraciones * 0.3)
-//    		randomPolicy = true;
-//    	else
-//    		randomPolicy = false;
+    	if(StateManager.iteracionActual < StateManager.numIteraciones * 0.3)
+    		randomPolicy = true;
+    	else
+    		randomPolicy = false;
     	
     	// Criterio de selección: random
     	if(randomPolicy) {

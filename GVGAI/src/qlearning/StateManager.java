@@ -32,8 +32,8 @@ public class StateManager {
 	
 	public static int contadorNIL = 0;
 	
-	public static int numObjetivos;
-	public static int numObjetivosAcertados=0;
+	//public static int numObjetivos;
+
 	
 	//Variables comunes a varias clases
 	public static int numCol;
@@ -191,13 +191,11 @@ public class StateManager {
 				
 				R.put(new ParEstadoAccion(estado,accion), valorR);
 			}
-		// Castigamos no ir hacia la bola
-		//R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_DCHA), -100);
-		//R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_IZQDA), -100);
 		
-		// Premiamos ir hacia la bola
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_IZQDA), 150);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_DCHA), 150);
+		// Premiamos mandar la bola hacia el hueco
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_IZQDA), 75);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_MEDIO, ACCIONES.DESP_MEDIO), 75);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_DCHA), 75);
 		
 		// Premiamos iniciar el juego
 		//R.put(new ParEstadoAccion(ESTADOS.SIN_BOLA,ACTIONS.ACTION_USE), 100);
@@ -412,8 +410,7 @@ public class StateManager {
 		if(primeraVez) { //Localiza los huecos en las filas de osbtauclos del mapa
 			 huecos = getHuecos(mapaObstaculos);
 			 if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
-			 cuentaObjetivos(mapaObstaculos); //Actualiza el numero de objetivos de este mapa
-			 numObjetivosAcertados=0;
+			 //StateManager.numObjetivos = cuentaObjetivos(mapaObstaculos); //Actualiza el numero de objetivos de este mapa
 			 primeraVez = false;
 		}
 		
@@ -461,7 +458,7 @@ public class StateManager {
 				if(verbose) System.out.println("Aumenta la puntuación!");
 				numVecesSinPuntos = 0;
 
-				numObjetivosAcertados+= (obs.getGameScore()-scoreAnterior) /2;
+				
 
 				scoreAnterior = scoreActual;
 				return ESTADOS.CONSIGUE_PUNTOS;
@@ -1225,9 +1222,9 @@ public class StateManager {
 	}
 	
 	/*
-	 * Cuenta y actualiza el numero de bloques objetivo en la partida
+	 * Cuenta el numero de bloques objetivo en la partida
 	 */
-	private static void cuentaObjetivos(char mapaObstaculos[][])
+	static int cuentaObjetivos(char mapaObstaculos[][])
 	{
 		int objetivos = 0;
 		for (int i = 0; i < numFilas; i++) {
@@ -1237,7 +1234,9 @@ public class StateManager {
 			}
 		}
 		
-		StateManager.numObjetivos = objetivos;
+		//pintaMapaObstaculos(mapaObstaculos);
+		
+		return objetivos;
 	}
 // _____________________________________________________________________
 //  METODOS VISUALES

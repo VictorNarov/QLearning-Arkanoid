@@ -18,6 +18,8 @@ public class Test {
     	String QLearningTraining = "qlearning.TrainingAgent";
     	String QLearningTesting = "qlearning.TestingAgent";
 
+    	double maxPuntuacionJuego[] = new double[] {110, 62, 98, 76, 50, 72, 62, 50, 140, 50};
+    	
 
 		//Load available games
 		String spGamesCollection =  "examples/all_games_sp.csv";
@@ -50,7 +52,7 @@ public class Test {
 //		ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0);
 //		
 		
-		boolean training = true; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
+		boolean training = false; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
 		boolean verbose = true; // Mostrar informacion de la partida mientras se ejecuta
 		
 		if(training)	// Crea la tabla Q a random y juega partidas con acciones aleatorias
@@ -87,10 +89,10 @@ public class Test {
 				System.out.println("\t\t\t\t\t\t\t\t\t\tIteración " + StateManager.iteracionActual + " / "+ StateManager.numIteraciones);
 				System.out.println("\t\t\t\t\t\t\t\t\t\tlevel: " + levelIdx);
 				
-				ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0);
-				double aciertoPartida = (double)StateManager.numObjetivosAcertados / (double)StateManager.numObjetivos *100;
-				System.out.println("Bloques partida = " + StateManager.numObjetivos);
-				System.out.println("\t\t\tPartida completada al " + aciertoPartida + " % [" +StateManager.numObjetivosAcertados +"/"+StateManager.numObjetivos+"]");
+				double puntuacion = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0)[1];
+				double aciertoPartida = Math.round(puntuacion / maxPuntuacionJuego[levelIdx] *100);
+
+				System.out.println("\t\t\tPartida completada al " + aciertoPartida + " % [" +puntuacion +"/"+maxPuntuacionJuego[levelIdx]+"]");
 				
 				if(guardarGrafica)
 					Y[StateManager.iteracionActual-1] = aciertoPartida;
@@ -130,8 +132,8 @@ public class Test {
 				for (int i = 0; i <= 4; i++) {
 					levelIdx = i; // level names from 0 to 4 (game_lvlN.txt).
 					level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
-					ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0);
-					scorePartidas[i] = Math.round((double)StateManager.numObjetivosAcertados / (double)StateManager.numObjetivos *100);
+					double puntuacion = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0)[1];
+					scorePartidas[i] = Math.round(puntuacion / maxPuntuacionJuego[levelIdx] *100);
 				}
 				
 				System.out.println("____________________________________________________");
