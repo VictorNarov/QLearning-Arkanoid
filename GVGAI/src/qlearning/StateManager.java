@@ -426,9 +426,7 @@ public class StateManager {
 					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x < 8*xmax/10 )
 						desplazamiento = 0;
 					else
-						desplazamiento = new Random().nextInt(70);
-					
-					
+						desplazamiento = new Random().nextInt(70);					
 				}
 					
 				
@@ -447,7 +445,7 @@ public class StateManager {
 		
 		
 		if(verbose)System.out.println("Desplazamiento: " + desplazamiento);
-		posActual.x += desplazamiento;
+		posActual.x += desplazamiento; // 0 - 70
 		
 		// Recalculamos el limite de las paredes del mapa
 		if(posBola.x > xmax)
