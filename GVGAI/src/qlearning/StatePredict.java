@@ -39,6 +39,8 @@ public class StatePredict {
 		// Percibimos el estado segun el hueco si lo hay
 		if(StateManager.huecos.size() > 0)
 			estado = StateManager.getEstadoDirHueco(mapaObstaculos);
+		else// Si el mapa no tiene huecos, busca el centroide de los objetivos
+			estado = StateManager.getEstadoDirObjetivo(mapaObstaculos);
 		
 		
 		if(StateManager.golpeaBola(posBola, posBolaAnterior))

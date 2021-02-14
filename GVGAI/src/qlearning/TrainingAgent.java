@@ -21,7 +21,7 @@ public class TrainingAgent extends AbstractPlayer {
 	
 	/* Parametros del Aprendizaje */
 	private double alpha = 0.1; // Factor Exploracion tamaño del paso
-	private double gamma = 0.2; // Factor descuento recompensa futura
+	private double gamma = 0.7; // Factor descuento recompensa futura
 
 	
 	boolean randomPolicy=true; // RandomPolicy o MaxQ
@@ -88,7 +88,7 @@ public class TrainingAgent extends AbstractPlayer {
 
     	//System.out.println(stateObs.getGameTick());
     	
-		if(StateManager.contadorNIL >= 100)
+		if(StateManager.contadorNIL >= 300)
 			return ACTIONS.ACTION_ESCAPE;
 		
     	
@@ -111,12 +111,12 @@ public class TrainingAgent extends AbstractPlayer {
     	// Percibimos el estado actual e incrementamos su contador
     	ESTADOS estadoActual = StateManager.getEstado(stateObs, this.posBolaAnterior, this.mapaObstaculos);
     	estadoActual.incrementa();
-    	if(verbose) System.out.println("Estado actual: " + estadoActual.toString());
+    	if(verbose) System.out.println("\t\t\tEstado actual: " + estadoActual.toString());
     	
 
     	
     	// Captura el estado en ese momento de ejecución //
-    	
+/*   	
 		if ( !StateManager.diccionarioEstadoCaptura.get(estadoActual) ) {
 			try {
 				Thread.sleep(200);
@@ -126,7 +126,7 @@ public class TrainingAgent extends AbstractPlayer {
 				System.out.println("Fallo al realizar la captura. " + ex.getMessage());
 			}
 		}
-    	
+ */
     	// -----------------------------------------------------------------------
     	// 							ALGORITMO Q LEARNING
     	// -----------------------------------------------------------------------
@@ -138,10 +138,20 @@ public class TrainingAgent extends AbstractPlayer {
     	
     	
 //    	// Criterio de selección: random hasta 1/3 iteraciones
-    	if(StateManager.iteracionActual < StateManager.numIteraciones * 0.3)
-    		randomPolicy = true;
+//    	if(StateManager.iteracionActual < StateManager.numIteraciones * 0.3)
+//    		randomPolicy = true;
+//    	else
+//    		randomPolicy = false;
+    	
+    	// Criterio de selección: epsilon greedy
+    	// A medida que transcurre el entrenamiento, aumenta epsilon
+    	double epsilon = (double)StateManager.iteracionActual / (double)StateManager.numIteraciones;
+    	
+    	if(new Random().nextDouble() > epsilon && epsilon < 0.75) // Ultimo 20% explotacion
+    		randomPolicy = true; // Exploración: más probable al principio del entrenamiento
     	else
-    		randomPolicy = false;
+    		randomPolicy = false; // Explotación: más probable al final del entrenamiento
+    	
     	
     	// Criterio de selección: random
     	if(randomPolicy) {
@@ -151,7 +161,8 @@ public class TrainingAgent extends AbstractPlayer {
     	}
     	else // Criterio seleccion: maxQ
     	{
-        	action = StateManager.getAccionMaxQ(estadoActual);
+    		
+    		action = StateManager.getAccionMaxQ(estadoActual);
     	}
 
     	if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());

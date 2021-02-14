@@ -18,8 +18,9 @@ public class Test {
     	String QLearningTraining = "qlearning.TrainingAgent";
     	String QLearningTesting = "qlearning.TestingAgent";
 
-    	double maxPuntuacionJuego[] = new double[] {110, 62, 98, 76, 50, 72, 62, 50, 140, 50};
-    	
+    	double maxPuntuacionJuego[] = new double[] {110, 62, 98, 76, 50, 72, 62, 50, 140, 50, 16};
+    	int nivelesTraining[] = new int[] {4,10};
+    	int nivelesTest[] = new int[] {2,4,6,7};
 
 		//Load available games
 		String spGamesCollection =  "examples/all_games_sp.csv";
@@ -41,7 +42,7 @@ public class Test {
 		String recordActionsFile = null;// "actions_" + games[gameIdx] + "_lvl"
 	
 		
-		int levelIdx = 2; // level names from 0 to 4 (game_lvlN.txt).
+		int levelIdx = 10; // level names from 0 to 4 (game_lvlN.txt).
 		String level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 		StateManager stateManager;
 		
@@ -52,7 +53,7 @@ public class Test {
 //		ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0);
 //		
 		
-		boolean training = false; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
+		boolean training = true; // Modo entrenamiento, crea una nueva tabla Q y juega M partidas aleatorias
 		boolean verbose = true; // Mostrar informacion de la partida mientras se ejecuta
 		
 		if(training)	// Crea la tabla Q a random y juega partidas con acciones aleatorias
@@ -67,15 +68,17 @@ public class Test {
 			/*
 			 * Grafica Aprendizaje Resultado Score / Epoca
 			 */
-			double [] Y = null;
+			double [] YScore = null;
 			double [] X = null;
 			Grafica graficaTicks = null;
+			Grafica graficaScore = null;
 			
 			if(guardarGrafica) {
+				graficaScore = new Grafica();
 				graficaTicks = new Grafica();
 				
 				X = new double[StateManager.numIteraciones]; // Epoca
-				Y = new double[StateManager.numIteraciones]; // Resultado Ticks
+				YScore = new double[StateManager.numIteraciones]; // Resultado Score
 				
 				for (int i = 0; i < X.length; i++) {
 					X[i] = i;
@@ -84,7 +87,7 @@ public class Test {
 			
 		
 			for (StateManager.iteracionActual = 1; StateManager.iteracionActual <= StateManager.numIteraciones; StateManager.iteracionActual++) {
-				levelIdx = new Random().nextInt(5); // level names from 0 to 4 (game_lvlN.txt).
+				levelIdx = nivelesTraining[new Random().nextInt(nivelesTraining.length)]; // level names from 0 to 4 (game_lvlN.txt).
 				level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 				System.out.println("\t\t\t\t\t\t\t\t\t\tIteración " + StateManager.iteracionActual + " / "+ StateManager.numIteraciones);
 				System.out.println("\t\t\t\t\t\t\t\t\t\tlevel: " + levelIdx);
@@ -95,22 +98,22 @@ public class Test {
 				System.out.println("\t\t\tPartida completada al " + aciertoPartida + " % [" +puntuacion +"/"+maxPuntuacionJuego[levelIdx]+"]");
 				
 				if(guardarGrafica)
-					Y[StateManager.iteracionActual-1] = aciertoPartida;
+					YScore[StateManager.iteracionActual-1] = aciertoPartida;
 			}
 		
 			stateManager.saveQTable();
 			if(guardarGrafica) {
 				String fecha = java.time.LocalDate.now().toString();
-				String nombreFich = fecha+"_PoliticaRandom.jpeg";
+				String nombreFich = fecha+"_GraficaScore.jpeg";
 				
-				graficaTicks.plot(X, Y, "-r", 2.0f, "TICKS");
-				graficaTicks.RenderPlot(); 
-				graficaTicks.title("Resultado partida % Acierto / Epoca de Training");
-				graficaTicks.xlim(1, StateManager.numIteraciones);
-				graficaTicks.ylim(1, 100);
-				graficaTicks.xlabel("Epoca de Training");                  
-				graficaTicks.ylabel("Resultado Ticks partida");                 
-				graficaTicks.saveas(nombreFich, 640, 480);
+				graficaScore.plot(X, YScore, "-r", 2.0f, "% Score");
+				graficaScore.RenderPlot(); 
+				graficaScore.title("Score (%) / Epoca de Training");
+				graficaScore.xlim(1, StateManager.numIteraciones);
+				graficaScore.ylim(1, 100);
+				graficaScore.xlabel("Epoca de Training");                  
+				graficaScore.ylabel("Resultado % Score Partida");                 
+				graficaScore.saveas(nombreFich, 640, 480);
 				
 				File file = new File( nombreFich );
 				try {
@@ -126,11 +129,11 @@ public class Test {
 			if(testingAfterTraining) // Probar todos los niveles
 			{
 				visuals = verbose;
-				double[] scorePartidas = new double[7];
+				double[] scorePartidas = new double[nivelesTraining.length];
 				
 				stateManager = new StateManager("TablaQ.csv", verbose);
-				for (int i = 0; i <= 4; i++) {
-					levelIdx = i; // level names from 0 to 4 (game_lvlN.txt).
+				for (int i = 0; i < nivelesTest.length; i++) {
+					levelIdx = nivelesTest[i]; // level names from 0 to 4 (game_lvlN.txt).
 					level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 					double puntuacion = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0)[1];
 					scorePartidas[i] = Math.round(puntuacion / maxPuntuacionJuego[levelIdx] *100);
@@ -139,12 +142,12 @@ public class Test {
 				System.out.println("____________________________________________________");
 				System.out.println("____________ ESTADÍSTICAS PARTIDAS _________________");
 				double total = 0;
-				for(int i = 0; i <= 4; i++) {
+				for(int i = 0; i < nivelesTraining.length; i++) {
 						System.out.println("% JUEGO " + i + " =\t"+ scorePartidas[i]);
 						total += scorePartidas[i];
 				}
 				
-				System.out.println("PUNTUACIÓN MEDIA =" + total / 5.0);
+				System.out.println("PUNTUACIÓN MEDIA =" + total / 8.0);
 				System.out.println("____________________________________________________");
 				
 			}

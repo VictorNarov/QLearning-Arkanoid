@@ -97,7 +97,6 @@ public class TestingAgent extends AbstractPlayer {
     	// Percibimos el estado actual e incrementamos su contador
     	ESTADOS estadoActual = StateManager.getEstado(stateObs, posBolaAnterior, this.mapaObstaculos);
     	estadoActual.incrementa();
-    	if(verbose) System.out.println("Estado actual: " + estadoActual.toString());
     	
     	// -----------------------------------------------------------------------
     	// 				ALGORITMO Q LEARNING EXPLOTACION DE LA TABLA Q
@@ -107,8 +106,8 @@ public class TestingAgent extends AbstractPlayer {
     	// Criterio seleccion: maxQ
     	ACCIONES action = StateManager.getAccionMaxQ(estadoActual);
     	StateManager.actua(action);
-    	
-    	if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());
+    	if(verbose) System.out.println("\t\t\t\tEstado actual: " + estadoActual.toString());
+    	if(verbose) System.out.println("\t\t\t\t--> DECIDE HACER: " + action.toString());
    
     	
     	

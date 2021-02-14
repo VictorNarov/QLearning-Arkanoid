@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Random;
@@ -31,7 +32,7 @@ public class StateManager {
 	Random randomGenerator;
 	
 	public static int contadorNIL = 0;
-	
+	private static ESTADOS estadoAnterior = ESTADOS.NIL;
 	//public static int numObjetivos;
 
 	
@@ -54,7 +55,6 @@ public class StateManager {
 		HUECO_DCHA(0),
 		HUECO_IZQDA(0),
 		HUECO_MEDIO(0),
-		GAME_OVER(0),
 		NIL(0);
 
 		private int contador; //Cuenta cada vez que se percibe ese estado
@@ -178,30 +178,32 @@ public class StateManager {
 			{
 				int valorR = 0;
 				
-				if(estado.toString().startsWith("ATRAPADO"))
-					valorR = -50;
+//				if(estado.toString().startsWith("ATRAPADO"))
+//					valorR = -50;
 								
 //				if(estado.equals(ESTADOS.NIL))
 //					valorR = -50;
-				
-				if(estado.equals(ESTADOS.GAME_OVER))
-					valorR = -100;
-				
 			
-				
 				R.put(new ParEstadoAccion(estado,accion), valorR);
 			}
 		
-		// Premiamos mandar la bola hacia el hueco
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_IZQDA), 75);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_MEDIO, ACCIONES.DESP_MEDIO), 75);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_DCHA), 75);
+//		// Premiamos mandar la bola hacia el hueco
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_IZQDA), 100);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_MEDIO, ACCIONES.DESP_MEDIO), 100);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_DCHA), 100);
 		
-		// Premiamos iniciar el juego
-		//R.put(new ParEstadoAccion(ESTADOS.SIN_BOLA,ACTIONS.ACTION_USE), 100);
+		// Premiamos desatascar la bola
+		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_DCHA_CERCA, ACCIONES.DESP_ALEATORIO), 100);
+		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_IZQDA_CERCA, ACCIONES.DESP_ALEATORIO), 100);
+		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_MEDIO, ACCIONES.DESP_ALEATORIO), 100);
 		
-		// Premiamos que se quede en el centro si la bola está alineada
-		R.put(new ParEstadoAccion(ESTADOS.CONSIGUE_PUNTOS, ACCIONES.NIL), 500);
+		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_DCHA, ACCIONES.DESP_MEDIO), -50);
+		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_IZQDA, ACCIONES.DESP_MEDIO), -50);
+		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_MEDIO, ACCIONES.DESP_MEDIO), -50);
+		
+//		
+//		// Premiamos seguir haciendo  lo que ha hecho si consigue puntos
+		R.put(new ParEstadoAccion(ESTADOS.CONSIGUE_PUNTOS, ACCIONES.NIL), 100);
 		R.put(new ParEstadoAccion(ESTADOS.NIL, ACCIONES.NIL), 100);
 	}
 	
@@ -401,12 +403,7 @@ public class StateManager {
 	public static ESTADOS getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
 		ESTADOS estado = ESTADOS.NIL;
-		
-		if(obs.isGameOver())
-			return ESTADOS.GAME_OVER;
-		
-
-		
+				
 		if(primeraVez) { //Localiza los huecos en las filas de osbtauclos del mapa
 			 huecos = getHuecos(mapaObstaculos);
 			 if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
@@ -420,17 +417,34 @@ public class StateManager {
 
 			
 		golpeaMuro(posBola, posBolaAnterior);
+		//System.out.println("huecos" + huecos.size());
+		double scoreActual = obs.getGameScore();
+		if(scoreActual > scoreAnterior)
+		{
+			if(verbose) System.out.println("Aumenta la puntuación!");
+			numVecesSinPuntos = 0;
+			scoreAnterior = scoreActual;
+			estado = ESTADOS.CONSIGUE_PUNTOS;
+		}
 		
 		// Percibimos el estado segun el hueco si lo hay
-		if(huecos.size() > 0)
+		else if(huecos.size() > 0 && huecos.size() < 4)
 			estado = getEstadoDirHueco(mapaObstaculos);
+		else// Si el mapa no tiene huecos o tiene muchos, busca la direccion de la mediana de los objetivos
+			estado = getEstadoDirObjetivo(mapaObstaculos);
+		
+		if(!estado.equals(ESTADOS.CONSIGUE_PUNTOS)
+				&& huecos.size() >=4 
+				&& estadoAnterior.toString().startsWith("ATRAPADO"))
+			estado = estadoAnterior;
 		
 		
-		if(golpeaBola(posBola, posBolaAnterior))
+		
+		if(!estado.equals(ESTADOS.CONSIGUE_PUNTOS) && golpeaBola(posBola, posBolaAnterior))
 		{
 			if(verbose) System.out.println("Golpea la bola");
 			
-			double scoreActual = obs.getGameScore();
+			
 			if(scoreActual == scoreAnterior) // No ha roto ningun ladrillo
 			{
 				if(verbose) System.out.println("No ha roto ningun ladrillo");
@@ -440,34 +454,35 @@ public class StateManager {
 					if(verbose)System.out.println("Se queda pillado más de 2 veces rebotando en "+posReboteLadrillo.toString());
 					//numVecesSinPuntos=0;
 					if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x <= 2*xmax/10)
-						return ESTADOS.ATRAPADO_IZQDA_CERCA;
+						estado = ESTADOS.ATRAPADO_IZQDA_CERCA;
 					else if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x > 2*xmax/10)
-						return ESTADOS.ATRAPADO_IZQDA;
+						estado = ESTADOS.ATRAPADO_IZQDA;
 					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x >= 8*xmax/10 )
-						return ESTADOS.ATRAPADO_DCHA_CERCA;
+						estado = ESTADOS.ATRAPADO_DCHA_CERCA;
 					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x < 8*xmax/10 )
-						return ESTADOS.ATRAPADO_DCHA;
+						estado = ESTADOS.ATRAPADO_DCHA;
 					else
-						return ESTADOS.ATRAPADO_MEDIO;				
+						estado = ESTADOS.ATRAPADO_MEDIO;
+					numVecesSinPuntos=0;
 				}
 				else
-					return ESTADOS.NO_CONSIGUE_PUNTOS;
+					estado = ESTADOS.NO_CONSIGUE_PUNTOS;
 		
 			} // Gana puntos
-			else {
-				if(verbose) System.out.println("Aumenta la puntuación!");
-				numVecesSinPuntos = 0;
-
+//			else {
+//
+//
+//				
+//
+//				scoreAnterior = scoreActual;
+//				estado = ESTADOS.CONSIGUE_PUNTOS;
+//				
 				
-
-				scoreAnterior = scoreActual;
-				return ESTADOS.CONSIGUE_PUNTOS;
-				
-				
-			}
+//			}
 				
 		}
 		
+		estadoAnterior = estado;
 		return estado;
 		
 	}
@@ -581,11 +596,14 @@ public class StateManager {
 	public static void actua(ACCIONES action)
 	{
 		if(action.equals(ACCIONES.DESP_IZQDA))
-			desplazamiento = 0;
+			desplazamiento = new Random().nextInt(10);
+			//desplazamiento = 0;
 		else if(action.equals(ACCIONES.DESP_DCHA))
-			desplazamiento = 70;
+			desplazamiento = new Random().nextInt(10)+60;
+			//desplazamiento = 70;
 		else if(action.equals(ACCIONES.DESP_MEDIO))
-			desplazamiento = 35;
+			desplazamiento = new Random().nextInt(15)+25;
+			//desplazamiento = 35;
 		else if(action.equals(ACCIONES.DESP_ALEATORIO))
 			desplazamiento = new Random().nextInt(70);
 	}
@@ -705,6 +723,26 @@ public class StateManager {
 							
 	}
 	
+	private static int getMedianaObjetivos(char mapaObstaculos[][])
+	{
+
+		ArrayList<Integer> objetivos = new ArrayList<Integer>();
+		
+		// Buscamos todos los objetivos y vamos acumulado sus coordenadas
+		for (int i = 0; i < numCol; i++) 
+			for (int j = numFilas-1; j >=0; j--)
+				if(mapaObstaculos[j][i] == 'X')
+				{
+					objetivos.add(i);
+				}
+		
+		// Devolvemos la mediana
+		Collections.sort(objetivos);
+		return objetivos.get((int)objetivos.size()/2);
+							
+	}
+	
+	
 	/*
 	 * Obtiene una lista de todas las columnas de huecos en la fila de obstaculos mas cercana
 	 */
@@ -798,11 +836,28 @@ public class StateManager {
 					
 		else dirHueco = ESTADOS.HUECO_DCHA;
 					
-		if(verbose) System.out.println("Hueco más cercano encontrado en la parte: " + dirHueco);
+		//if(verbose) System.out.println("Hueco más cercano encontrado en la parte: " + dirHueco);
 		return dirHueco;
-				
-
 	}
+	
+	static ESTADOS getEstadoDirObjetivo(char mapaObstaculos[][])
+	{
+		ESTADOS dirObjetivo = ESTADOS.NIL;
+		int mediana = getMedianaObjetivos(mapaObstaculos);
+		
+		int tercio = numCol / 3;
+		if(mediana <= tercio)
+			dirObjetivo = ESTADOS.HUECO_IZQDA;
+		
+		else if(mediana > tercio && mediana < 2*tercio)
+			dirObjetivo = ESTADOS.HUECO_MEDIO;
+					
+		else dirObjetivo = ESTADOS.HUECO_DCHA;
+					
+		if(verbose) System.out.println("Mediana objetivos encontrado en la parte: " + dirObjetivo);
+		return dirObjetivo;
+	}
+	
 	
 	static double getColPredict(StateObservation obs, Vector2d posBolaAnterior)
 	{
