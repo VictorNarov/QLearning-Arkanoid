@@ -2,7 +2,7 @@
 QLearning algorithm of Reinforcement Learning implemented in the GVGAI platform to solve the 80th game, called Roadfighter.
 
 <p align="center">
-<img src="GVGAI/resources/arkanoid.gif" align="center" width="250" height="400"/>
+<img src="GVGAI/resources/arkanoid.gif" align="center" width="500" height="458"/>
 </p>
 
 ## Instructions
