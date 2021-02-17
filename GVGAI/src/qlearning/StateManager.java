@@ -178,8 +178,8 @@ public class StateManager {
 			{
 				int valorR = 0;
 				
-//				if(estado.toString().startsWith("ATRAPADO"))
-//					valorR = -50;
+				if(estado.toString().startsWith("ATRAPADO") && accion.equals(ACCIONES.NIL))
+					valorR = -50;
 								
 //				if(estado.equals(ESTADOS.NIL))
 //					valorR = -50;
@@ -188,14 +188,14 @@ public class StateManager {
 			}
 		
 //		// Premiamos mandar la bola hacia el hueco
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_IZQDA), 100);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_MEDIO, ACCIONES.DESP_MEDIO), 100);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_DCHA), 100);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_IZQDA), 20);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_MEDIO, ACCIONES.DESP_MEDIO), 20);
+		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_DCHA), 20);
 		
 		// Premiamos desatascar la bola
-		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_DCHA_CERCA, ACCIONES.DESP_ALEATORIO), 100);
-		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_IZQDA_CERCA, ACCIONES.DESP_ALEATORIO), 100);
-		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_MEDIO, ACCIONES.DESP_ALEATORIO), 100);
+//		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_DCHA_CERCA, ACCIONES.DESP_ALEATORIO), 100);
+//		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_IZQDA_CERCA, ACCIONES.DESP_ALEATORIO), 100);
+//		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_MEDIO, ACCIONES.DESP_ALEATORIO), 100);
 		
 		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_DCHA, ACCIONES.DESP_MEDIO), -50);
 		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_IZQDA, ACCIONES.DESP_MEDIO), -50);
@@ -203,8 +203,9 @@ public class StateManager {
 		
 //		
 //		// Premiamos seguir haciendo  lo que ha hecho si consigue puntos
-		R.put(new ParEstadoAccion(ESTADOS.CONSIGUE_PUNTOS, ACCIONES.NIL), 100);
-		R.put(new ParEstadoAccion(ESTADOS.NIL, ACCIONES.NIL), 100);
+		R.put(new ParEstadoAccion(ESTADOS.CONSIGUE_PUNTOS, ACCIONES.NIL), 10);
+		R.put(new ParEstadoAccion(ESTADOS.NO_CONSIGUE_PUNTOS, ACCIONES.DESP_ALEATORIO), 5);
+		R.put(new ParEstadoAccion(ESTADOS.NIL, ACCIONES.NIL), 5);
 	}
 	
 	/*
@@ -428,13 +429,13 @@ public class StateManager {
 		}
 		
 		// Percibimos el estado segun el hueco si lo hay
-		else if(huecos.size() > 0 && huecos.size() < 4)
+		else if(huecos.size() > 0 )//&& huecos.size() < 4
 			estado = getEstadoDirHueco(mapaObstaculos);
 		else// Si el mapa no tiene huecos o tiene muchos, busca la direccion de la mediana de los objetivos
 			estado = getEstadoDirObjetivo(mapaObstaculos);
 		
-		if(!estado.equals(ESTADOS.CONSIGUE_PUNTOS)
-				&& huecos.size() >=4 
+		if(!estado.equals(ESTADOS.CONSIGUE_PUNTOS)//&& huecos.size() >=4 
+				
 				&& estadoAnterior.toString().startsWith("ATRAPADO"))
 			estado = estadoAnterior;
 		
@@ -935,7 +936,7 @@ public class StateManager {
 //		if(colJugador >= colCorteBola-20 && colJugador <= colCorteBola+20 && velocidadJugador < -10)
 //			return ESTADOS.BOLA_DCHA;
 		
-		if(colJugador >= colCorteBola-20 && colJugador <= colCorteBola+20 ) {
+		if(colJugador >= colCorteBola-25 && colJugador <= colCorteBola+25 ) {
 			if (velocidadJugador > 5)
 				return ACTIONS.ACTION_LEFT;
 			else if (velocidadJugador < -5)
