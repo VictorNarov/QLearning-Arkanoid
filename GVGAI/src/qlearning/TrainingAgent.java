@@ -20,8 +20,8 @@ public class TrainingAgent extends AbstractPlayer {
 	boolean verbose = StateManager.verbose;
 	
 	/* Parametros del Aprendizaje */
-	private double alpha = 0.1; // Factor Exploracion tamaño del paso
-	private double gamma = 0.7; // Factor descuento recompensa futura
+	private double alpha = 0.01; // Factor Exploracion tamaño del paso
+	private double gamma = 0.8; // Factor descuento recompensa futura
 
 	
 	boolean randomPolicy=true; // RandomPolicy o MaxQ
@@ -71,6 +71,22 @@ public class TrainingAgent extends AbstractPlayer {
 		//vidaAnterior = so.getAvatarHealthPoints();
 		posBolaAnterior = new Vector2d(-1, -1);
     	numAccionesPosibles = StateManager.ACCIONES.values().length;
+    	
+    	
+    	// Criterio de selección: epsilon greedy
+    	// A medida que transcurre el entrenamiento, aumenta epsilon
+    	double epsilon = (double)StateManager.iteracionActual / (double)StateManager.numIteraciones;
+    	
+    	if(new Random().nextDouble() > epsilon && epsilon < 0.75) { // Ultimo 20% explotacion
+    		randomPolicy = true; // Exploración: más probable al principio del entrenamiento
+    		System.out.println("Epsilon = " + epsilon + "\tAcción: random");
+    		}
+    	
+    	else {
+    		randomPolicy = false; // Explotación: más probable al final del entrenamiento
+    		System.out.println("Epsilon = " + epsilon + "\tAcción: maxQ(s)");
+    	}
+    	
     }
     
     /**
@@ -143,14 +159,6 @@ public class TrainingAgent extends AbstractPlayer {
 //    	else
 //    		randomPolicy = false;
     	
-    	// Criterio de selección: epsilon greedy
-    	// A medida que transcurre el entrenamiento, aumenta epsilon
-    	double epsilon = (double)StateManager.iteracionActual / (double)StateManager.numIteraciones;
-    	
-    	if(new Random().nextDouble() > epsilon && epsilon < 0.75) // Ultimo 20% explotacion
-    		randomPolicy = true; // Exploración: más probable al principio del entrenamiento
-    	else
-    		randomPolicy = false; // Explotación: más probable al final del entrenamiento
     	
     	
     	// Criterio de selección: random
@@ -180,7 +188,7 @@ public class TrainingAgent extends AbstractPlayer {
         int r = StateManager.R.get(new ParEstadoAccion(estadoSiguiente, action));
         
         double value = q + alpha * (r + gamma * maxQ - q);
-        //System.out.println(value);
+        
         // Actualizamos la tabla Q
         StateManager.Q.put(new ParEstadoAccion(estadoActual, action), value);
  		 
