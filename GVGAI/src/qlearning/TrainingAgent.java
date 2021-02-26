@@ -19,8 +19,8 @@ public class TrainingAgent extends AbstractPlayer {
 	boolean verbose = StateManager.verbose;
 	
 	/* Parametros del Aprendizaje */
-	private double alpha = 0.1; // Factor Exploracion tamaño del paso
-	private double gamma = 0.7; // Factor descuento recompensa futura
+	private double alpha = 0.2; // Factor Exploracion tamaño del paso
+	private double gamma = 0.1; // Factor descuento recompensa futura
 
 	
 	boolean randomPolicy=true; // RandomPolicy o MaxQ
@@ -75,15 +75,15 @@ public class TrainingAgent extends AbstractPlayer {
     	// Criterio de selección: epsilon greedy
     	// A medida que transcurre el entrenamiento, aumenta epsilon
     	double epsilon = (double)StateManager.iteracionActual / (double)StateManager.numIteraciones;
-    	
-    	if(new Random().nextDouble() > epsilon && epsilon < 0.75) { // Ultimo 20% explotacion
+
+    	if(new Random().nextDouble() > epsilon) { // 
     		randomPolicy = true; // Exploración: más probable al principio del entrenamiento
-    		System.out.println("Epsilon = " + epsilon + "\tAcción: random");
+    		System.out.println("Epsilon = " + epsilon + "\nAcción: random");
     		}
     	
     	else {
     		randomPolicy = false; // Explotación: más probable al final del entrenamiento
-    		System.out.println("Epsilon = " + epsilon + "\tAcción: maxQ(s)");
+    		System.out.println("Epsilon = " + epsilon + "\nAcción: maxQ(s)");
     	}
     	
     }
@@ -116,6 +116,7 @@ public class TrainingAgent extends AbstractPlayer {
     	Vector2d posBola = StateManager.getPosBolaReal(stateObs);
     	
 
+    		
     	
     	//if(verbose) System.out.println("VIDA ACTUAL = "+vidaActual);
     	if(verbose) System.out.println("POSICION = " + posJugador[0] + "-" + posJugador[1]);   	
@@ -193,11 +194,14 @@ public class TrainingAgent extends AbstractPlayer {
 
         double maxQ = StateManager.maxQ(estadoSiguiente);
         //int r = StateManager.R.get(new ParEstadoAccion(estadoActual, action));
-        double r = StateManager.getR(estadoSiguiente);
+        double r = StateManager.getR(estadoSiguiente, stateObsFuture);
         
+        if(verbose) System.out.println("MaxQ ("+estadoSiguiente+ ") ="+ maxQ);
         if(verbose) System.out.println("RECOMPENSA ("+estadoSiguiente+ ") ="+ r);
         
         double value = q + alpha * (r + gamma * maxQ - q);
+        
+        if(verbose) System.out.println("Q nuevo = " + value);
         
         // Actualizamos la tabla Q
         StateManager.actualizaQ(estadoActual, action, value);
@@ -215,7 +219,7 @@ public class TrainingAgent extends AbstractPlayer {
 //			}
 		
 		
-		
+        StateManager.estadoAnterior = estadoActual;
 		posBolaAnterior = posBolaActual;
 		
 

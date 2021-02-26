@@ -75,6 +75,7 @@ public class StatePredict {
 		// Dígito 3: VELOCIDAD DE LA PLATAFORMA
 		estado.setCharAt(3, StateManager.getEstadoVelocidadJugador(velocidadJugador));
 		
+		
 
 
 		return estado.toString();

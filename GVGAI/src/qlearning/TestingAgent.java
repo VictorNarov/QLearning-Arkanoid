@@ -23,6 +23,7 @@ public class TestingAgent extends AbstractPlayer {
 	private int numFilas;
 	private int numCol;
 	private char[][] mapaObstaculos;
+	//private String estadoAnterior="9999";
 	
 	/* Variables Q-Learning */
 	//private int vidaAnterior;
@@ -109,24 +110,24 @@ public class TestingAgent extends AbstractPlayer {
     	// Criterio seleccion: maxQ
     	ACTIONS action = StateManager.getAccionMaxQ(estadoActual);
 
-    	if(verbose) System.out.println("\t\t\t\tEstado actual: " + estadoActual.toString());
+    	if(verbose) System.out.println("\t\t\t\tEstado: " + StateManager.estadoAnterior +" -> " + estadoActual);
+    	if(verbose) System.out.println("\t\t\t\tRECOMPENSA = "+StateManager.getR(estadoActual, stateObs));
     	if(verbose) System.out.println("\t\t\t\t--> DECIDE HACER: " + action.toString());
    
     	
     	
 	  	
-//		if(verbose)
-//			try {
-//				Thread.sleep(250);
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		
+		if(verbose)
+			try {
+				Thread.sleep(250);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		
 		
-
 		
+    	StateManager.estadoAnterior = estadoActual;
 		posBolaAnterior = posBolaActual;
 		
         return action;

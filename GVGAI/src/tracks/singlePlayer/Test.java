@@ -3,11 +3,13 @@ package tracks.singlePlayer;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Random;
 
+import ontology.Types.ACTIONS;
 import qlearning.Grafica;
 import qlearning.StateManager;
-import qlearning.StateManager.ESTADOS;
+
 import tools.Utils;
 import tracks.ArcadeMachine;
 
@@ -19,8 +21,8 @@ public class Test {
     	String QLearningTesting = "qlearning.TestingAgent";
 
     	double maxPuntuacionJuego[] = new double[] {110, 62, 98, 76, 50, 72, 62, 50, 140, 50, 16};
-    	int nivelesTraining[] = new int[] {4,10};
-    	int nivelesTest[] = new int[] {2,4,6,7};
+    	int nivelesTraining[] = new int[] {3};
+    	int nivelesTest[] = new int[] {3};
 
 		//Load available games
 		String spGamesCollection =  "examples/all_games_sp.csv";
@@ -42,7 +44,7 @@ public class Test {
 		String recordActionsFile = null;// "actions_" + games[gameIdx] + "_lvl"
 	
 		
-		int levelIdx = 10; // level names from 0 to 4 (game_lvlN.txt).
+		int levelIdx = 3; // level names from 0 to 4 (game_lvlN.txt).
 		String level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 		StateManager stateManager;
 		
@@ -63,7 +65,7 @@ public class Test {
 			boolean randomTablaQ = true; // Verdadero: crea la tabla Q con valores random, si no, a cero
 			boolean guardarGrafica = true; // Si queremos guardar una imagen de la grafica Ticks/epoca
 			stateManager = new StateManager(randomTablaQ,false);
-			StateManager.numIteraciones = 100; // Numero de partidas a jugar
+			StateManager.numIteraciones = 2000; // Numero de partidas a jugar
 
 			/*
 			 * Grafica Aprendizaje Resultado Score / Epoca
@@ -92,13 +94,20 @@ public class Test {
 				System.out.println("\t\t\t\t\t\t\t\t\t\tIteración " + StateManager.iteracionActual + " / "+ StateManager.numIteraciones);
 				System.out.println("\t\t\t\t\t\t\t\t\t\tlevel: " + levelIdx);
 				
+//				visuals = false; StateManager.verbose = false;
+//				if(StateManager.iteracionActual % 250 == 0) { // Mostrar cada 250 partidas
+//					politica MaxQ
+//					visuals = true;
+//					StateManager.verbose = true;
+//				}
+				
 				double puntuacion = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0)[1];
 				double aciertoPartida = Math.round(puntuacion / maxPuntuacionJuego[levelIdx] *100);
 
 				System.out.println("\t\t\tPartida completada al " + aciertoPartida + " % [" +puntuacion +"/"+maxPuntuacionJuego[levelIdx]+"]");
+				System.out.println("\t\t\tN Estados = " + StateManager.contadoresEstados.size());
 				
-				if(guardarGrafica)
-					YScore[StateManager.iteracionActual-1] = aciertoPartida;
+				YScore[StateManager.iteracionActual-1] = aciertoPartida;
 			}
 		
 			stateManager.saveQTable();
@@ -124,12 +133,14 @@ public class Test {
 				}
 				
 			}
+			
+			guardaScoreTraining(YScore);
 				
 			
 			if(testingAfterTraining) // Probar todos los niveles
 			{
 				visuals = verbose;
-				double[] scorePartidas = new double[nivelesTraining.length];
+				double[] scorePartidas = new double[nivelesTest.length];
 				
 				stateManager = new StateManager("TablaQ.csv", verbose);
 				for (int i = 0; i < nivelesTest.length; i++) {
@@ -147,7 +158,7 @@ public class Test {
 						total += scorePartidas[i];
 				}
 				
-				System.out.println("PUNTUACIÓN MEDIA =" + total / 8.0);
+				System.out.println("PUNTUACIÓN MEDIA =" + total / nivelesTest.length);
 				System.out.println("____________________________________________________");
 				
 			}
@@ -168,5 +179,36 @@ public class Test {
 		
 
 		}
+    
+    
+    	private static void guardaScoreTraining(double [] scorePartidas)
+    	{
+
+    		/* Creación del fichero de salida */
+    	    try (PrintWriter csvFile = new PrintWriter(new File("TrainingScore.csv"))) {
+    			
+    			
+    			StringBuilder buffer = new StringBuilder();
+    			buffer.append("Epoca_Training;Score_Partida");
+    			buffer.append("\n");
+    			
+    			for(int i=0; i<scorePartidas.length; i++) {
+    				buffer.append( String.valueOf(i+1) );
+    				buffer.append(";");
+    				buffer.append(Double.toString(scorePartidas[i]).replace('.', ','));
+    				buffer.append("\n");
+    			}
+    			
+    			
+    			csvFile.write(buffer.toString());
+    			
+
+    			
+    			csvFile.close();
+    			
+    	    } catch( Exception ex ) {
+    	    	System.out.println(ex.getMessage());
+    	    	}
+    	}
     }
 

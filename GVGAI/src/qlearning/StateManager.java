@@ -32,7 +32,7 @@ public class StateManager {
 	Random randomGenerator;
 	
 	public static int contadorNIL = 0;
-	private static String estadoAnterior = "";
+	static String estadoAnterior = "99999";
 	//public static int numObjetivos;
 
 	
@@ -173,67 +173,169 @@ public class StateManager {
 // ---------------------------------------------------------------------
 //  					METODOS TABLAS APRENDIZAJE
 // ---------------------------------------------------------------------
-	static double getR(String estado)
+	static double getR(String estado, StateObservation obs)
 	{
 		double recompensa = 0;
+
+		if(estadoAnterior.charAt(2) >='3' && estado.charAt(2) < estadoAnterior.charAt(2)) { //Si se ha acercado a la bola
+			if(verbose)System.out.println("+75: se ha acercado a la bola");
+			recompensa += 75;
+			
+		}
+		if(estado.charAt(2) <= '5' && estado.charAt(3) < estadoAnterior.charAt(3)) { // Si ha reducido la velocidad a poca distancia
+			recompensa += 75;
+			if(verbose)System.out.println("+75: poca distancia y ha reducido velocidad");
+		}
 		
+		//Si se ha alejado de la bola CASTIGO
+		if(estadoAnterior.charAt(2) >'3' && estado.charAt(2) > estadoAnterior.charAt(2) && estado.charAt(0) != '1') { 
+			recompensa -= 75;
+			if(verbose)System.out.println("-75: se ha alejado de la bola ");
+		}
+		// No reduce distancia CASTIGO
+		else if(estadoAnterior.charAt(2) >'3' && estado.charAt(2) == estadoAnterior.charAt(2) && estado.charAt(0) != '1') { 
+				recompensa -= 30;
+				if(verbose)System.out.println("-30: no ha reducido distancia");
+			}
+		
+		//Si ha dejado de estar en la zona de golpeo: CASTIGO
+		if(estadoAnterior.charAt(0) == '1' && estado.charAt(0) != '1') {
+			recompensa -= 200;
+			if(verbose)System.out.println("-200: ha dejado de estar en la zona de golpeo");
+		}
+		//Si sigue estando en la zona de golpeo: PREMIO
+		if(estadoAnterior.charAt(0) == '1' && estado.charAt(0) == '1') {
+			recompensa += 50;
+			if(verbose)System.out.println("+50: sigue estando en la zona de golpeo");
+		}
+		//Si ha entrado en la zona de golpeo: PREMIO
+		if(estadoAnterior.charAt(0) != '1' && estado.charAt(0) == '1') {
+			recompensa += 250;
+			if(verbose)System.out.println("+250: ha entrado en la zona de golpeo");
+		}
+		
+//		// Estar lejos y parado
+//		if(estado.charAt(2) >= '5' && estado.charAt(3) == '0') {
+//			recompensa -= 100;
+//			if(verbose)System.out.println("-100: esta lejos y parado");
+//		}
+		// Lejos y empezar a moverse hacia la pelota
+		if(estado.charAt(2) >= '5' && estadoAnterior.charAt(3)=='0' && estado.charAt(3) == '1' && 
+				(obs.getAvatarOrientation().x==1 && estado.charAt(0)=='2' || obs.getAvatarOrientation().x==-1 && estado.charAt(0)=='0')) {
+			recompensa += 50;
+			if(verbose)System.out.println("+50: estaba lejos y ha empezado a moverse");
+		}
+		// Lejos y empezar a moverse en contra de la pelota
+		else if(estado.charAt(2) >= '5' && estadoAnterior.charAt(3)=='0' && estado.charAt(3) == '1' && 
+			(obs.getAvatarOrientation().x==1 && estado.charAt(0)=='0' || obs.getAvatarOrientation().x==-1 && estado.charAt(0)=='2')) {
+		recompensa -= 50;
+		if(verbose)System.out.println("-50: estaba lejos y ha empezado a moverse en contra del objetivo");
+	}
+		// Lejos y aumenta velocidad hacia la pelota
+		else if(estado.charAt(2) >= '5' && estadoAnterior.charAt(3) < estado.charAt(3)  && 
+				(obs.getAvatarOrientation().x==1 && estado.charAt(0)=='2' || obs.getAvatarOrientation().x==-1 && estado.charAt(0)=='0')) {
+			recompensa += 35;
+			if(verbose)System.out.println("+35: aumenta velocidad hacia objetivo");
+		}
+		// Lejos y aumenta velocidad en contra de la pelota
+		else if(estado.charAt(2) >= '5' && estadoAnterior.charAt(3) < estado.charAt(3)  && 
+				(obs.getAvatarOrientation().x==1 && estado.charAt(0)=='0' || obs.getAvatarOrientation().x==-1 && estado.charAt(0)=='2')) {
+			recompensa -= 35;
+			if(verbose)System.out.println("-35: aumenta velocidad en contra del objetivo");
+		}
+		/*
 		if(estado.charAt(0) == '1') // Pelota dentro margen de la plataforma
 			recompensa +=10;
 		
 		if(estado.charAt(2) == '3') // Distancia a la pelota cerca
 			recompensa += 10;
 		
-		else if(estado.charAt(2) == '0') { // Va a golpear con parte izqda
-			if(estado.charAt(1) == '0') // Hueco izqda
+		*/
+		if(estadoAnterior.charAt(2) <=2 && estado.charAt(2) == '0') { // Va a golpear con parte izqda
+			if(estado.charAt(1) == '0') { // Hueco izqda
 				recompensa += 50;
-			else if(estado.charAt(1) == '1') // Hueco medio
+				if(verbose)System.out.println("+50: muy cerca izqda y hueco izqda");
+			}
+			else if(estado.charAt(1) == '1') { // Hueco medio
 				recompensa += 25;
-			else
+				if(verbose)System.out.println("+25: muy cerca izqda y hueco medio");
+			}
+			else {
 				recompensa += 20; //Hueco dcha
+				if(verbose)System.out.println("+20: muy cerca izqda y hueco dcha");
+				
+			}
 		
 		}
-		else if(estado.charAt(2) == '1') { // Va a golpear con parte centro
-			if(estado.charAt(1) == '0') // Hueco izqda
+		else if(estadoAnterior.charAt(2) <='2' && estado.charAt(2) == '1') { // Va a golpear con parte centro
+			if(estado.charAt(1) == '0') { // Hueco izqda
 				recompensa += 25;
-			else if(estado.charAt(1) == '1') // Hueco medio
+				if(verbose)System.out.println("+25: muy cerca centro y hueco izqda");
+			}
+			else if(estado.charAt(1) == '1') { // Hueco medio
 				recompensa += 50;
-			else
+				if(verbose)System.out.println("+50: muy cerca centro y hueco centro");
+			}
+			else {
 				recompensa += 25; //Hueco dcha
+				if(verbose)System.out.println("+25: muy cerca centro y hueco dcha");
+			}
 		
 		}
-		else if(estado.charAt(2) == '2') { // Va a golpear con parte derecha
-			if(estado.charAt(1) == '0') // Hueco izqda
+		else if(estadoAnterior.charAt(2) <='2' && estado.charAt(2) == '2') { // Va a golpear con parte derecha
+			if(estado.charAt(1) == '0') { // Hueco izqda
 				recompensa += 20;
-			else if(estado.charAt(1) == '1') // Hueco medio
+				if(verbose)System.out.println("+20: muy cerca dcha y hueco izqda");
+			}
+			else if(estado.charAt(1) == '1') { // Hueco medio
 				recompensa += 25;
-			else
+				if(verbose)System.out.println("+25: muy cerca dcha y hueco centro");
+			}
+			else {
 				recompensa += 50; //Hueco dcha
+				if(verbose)System.out.println("+50: muy cerca dcha y hueco dcha");
+			}
 		
 		}
+
 		
 		//Distancia cerca y velocidad de aproximación media
-		if(estado.charAt(2) == '3' && estado.charAt(3) == '2')
+		if(estado.charAt(2) == '3' && estado.charAt(3) == '2') {
 			recompensa += 20;
+			if(verbose)System.out.println("+20: distancia cerca y velocidad media");
+		}
 		
 		//Distancia cerca o menor y velocidad alta: CASTIGO
-		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '3')
+		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '3') {
 			recompensa -= 75;
+			if(verbose)System.out.println("-75: distancia cerca o menor y velocidad alta");
+		}
 		
 		//Distancia cerca o menor y velocidad muy alta: CASTIGO+
-		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '4')
+		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '4'){
 			recompensa -= 100;
+			if(verbose)System.out.println("-100: distancia cerca o menor y velocidad muy alta");
+		}
 		
 		//Distancia cerca  y velocidad baja: PREMIO
-		else if(estado.charAt(2) == '3' && estado.charAt(3) == '1')
+		else if(estado.charAt(2) == '3' && estado.charAt(3) == '1') {
 			recompensa += 50;
+			if(verbose)System.out.println("+30: distancia cerca y velocidad baja");
+		}
 		
 		//Distancia muy cerca  y velocidad baja: PREMIO
-		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '1')
-			recompensa += 25;
+		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '1') {
+			recompensa += 50;
+			if(verbose)System.out.println("+50: distancia muy cerca y velocidad baja");
+		}
 		
 		//Distancia muy cerca  y velocidad muy baja: PREMIO+
-		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '0')
+		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '0') {
 			recompensa += 100;
+			if(verbose)System.out.println("+100: distancia muy cerca y velocidad muy baja");
+		}
+		
+		
 		
 		return recompensa;
 		
@@ -560,6 +662,12 @@ public class StateManager {
 		golpeaMuro(posBola, posBolaAnterior); // Actualizamos la zona donde golpea el muro (si lo hace)
 		//System.out.println("huecos" + huecos.size());
 		double scoreActual = obs.getGameScore();
+		if(scoreActual == scoreAnterior)
+			StateManager.contadorNIL++; //Contador de numero iteraciones sin puntos
+		else
+			StateManager.contadorNIL = 0; 
+		
+		scoreAnterior = scoreActual;
 
 		// Dígito 1: UBICACIÓN
 		// Percibimos el estado segun el hueco si lo hay
@@ -587,7 +695,7 @@ public class StateManager {
 		}
 		else //Bola sube
 		{
-			
+			if(verbose) System.out.println("Bola sube." ); 
 			//Obtenemos la posicion de la bola y la distancia en columnas
 			char posDistBola[] = getEstadoPosDistBola(posActual, posBola);
 			
@@ -602,7 +710,7 @@ public class StateManager {
 		
 		String estadoPercibido = estado.toString();
 		
-		estadoAnterior = estadoPercibido;
+		
 		
 		//Incrementamos su contador
 		//System.out.println(estadoPercibido);
@@ -726,12 +834,20 @@ public class StateManager {
 		else
 			pos = '0'; //izqda
 		
-		if(Math.abs(distancia) <= 150)
-			dist = '3'; // cerca
-		else if(Math.abs(distancia) <= 300)
-			dist = '4'; // lejos
+		if(Math.abs(distancia) <= xmax * 0.15)
+			dist = '3'; // 10% mapa
+		else if(Math.abs(distancia) <= xmax * 0.25)
+			dist = '4'; // 15 % mapa
+		else if(Math.abs(distancia) <= xmax * 0.35)
+			dist = '5'; // 20 % mapa
+		else if(Math.abs(distancia) <= xmax * 0.5)
+			dist = '6'; // 30 % mapa
+		else if(Math.abs(distancia) <= xmax * 0.6)
+			dist = '7'; // 40 % mapa
+		else if(Math.abs(distancia) <= xmax * 0.7)
+			dist = '8'; // 50 % mapa
 		else
-			dist = '5'; // muy lejos
+			dist = '9'; // > 50% mapa (MUY LEJOS)
 
 		return new char[] {pos,dist};
 		
@@ -1102,12 +1218,20 @@ public class StateManager {
 			else
 				posTrayectoriaBola = '2'; //dcha
 			
-			if(Math.abs(distancia) <= 150)
-				disTrayectoriaBola = '3'; // cerca
-			else if(Math.abs(distancia) <= 300)
-				disTrayectoriaBola = '4'; // lejos
+			if(Math.abs(distancia) <= xmax * 0.15)
+				disTrayectoriaBola = '3'; // 10% mapa
+			else if(Math.abs(distancia) <= xmax * 0.25)
+				disTrayectoriaBola = '4'; // 15 % mapa
+			else if(Math.abs(distancia) <= xmax * 0.35)
+				disTrayectoriaBola = '5'; // 20 % mapa
+			else if(Math.abs(distancia) <= xmax * 0.5)
+				disTrayectoriaBola = '6'; // 30 % mapa
+			else if(Math.abs(distancia) <= xmax * 0.6)
+				disTrayectoriaBola = '7'; // 40 % mapa
+			else if(Math.abs(distancia) <= xmax * 0.7)
+				disTrayectoriaBola = '8'; // 50 % mapa
 			else
-				disTrayectoriaBola = '5'; // muy lejos
+				disTrayectoriaBola = '9'; // > 50% mapa (MUY LEJOS)
 		}
 		
 		return new char[] {posTrayectoriaBola,disTrayectoriaBola};
@@ -1148,13 +1272,14 @@ public class StateManager {
 
 	static char getEstadoVelocidadJugador(double velocidad)
 	{
+		velocidad = Math.abs(velocidad);
 		if(velocidad <= 3)
 			return '0'; // muy baja
 		else if(velocidad <= 5)
 			return '1'; //  baja
-		else if(velocidad <= 15)
+		else if(velocidad <= 10)
 			return '2'; //media
-		else if(velocidad <= 25)
+		else if(velocidad <= 15)
 			return '3'; // alta
 		else
 			return '4'; // muy alta
