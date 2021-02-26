@@ -10,8 +10,7 @@ import core.game.StateObservation;
 import core.player.AbstractPlayer;
 import ontology.Types;
 import ontology.Types.ACTIONS;
-import qlearning.StateManager.ACCIONES;
-import qlearning.StateManager.ESTADOS;
+
 import tools.Vector2d;
 
 import tools.ElapsedCpuTimer;
@@ -70,7 +69,7 @@ public class TrainingAgent extends AbstractPlayer {
 		
 		//vidaAnterior = so.getAvatarHealthPoints();
 		posBolaAnterior = new Vector2d(-1, -1);
-    	numAccionesPosibles = StateManager.ACCIONES.values().length;
+    	numAccionesPosibles = StateManager.ACCIONES.length;
     	
     	
     	// Criterio de selección: epsilon greedy
@@ -104,12 +103,19 @@ public class TrainingAgent extends AbstractPlayer {
 
     	//System.out.println(stateObs.getGameTick());
     	
+    	// SI no hay bola, la lanza automáticamente. (No es objeto de aprendizaje)
+    	if(!StateManager.hayBola(stateObs))
+    		return ACTIONS.ACTION_USE;
+    	
 		if(StateManager.contadorNIL >= 300)
 			return ACTIONS.ACTION_ESCAPE;
 		
     	
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
     	int[] posJugador = StateManager.getIndiceMapa(pos); // Indice del mapa
+    	Vector2d posBola = StateManager.getPosBolaReal(stateObs);
+    	
+
     	
     	//if(verbose) System.out.println("VIDA ACTUAL = "+vidaActual);
     	if(verbose) System.out.println("POSICION = " + posJugador[0] + "-" + posJugador[1]);   	
@@ -125,8 +131,8 @@ public class TrainingAgent extends AbstractPlayer {
     	if(verbose) StateManager.pintaMapaObstaculos(mapaObstaculos);
     	
     	// Percibimos el estado actual e incrementamos su contador
-    	ESTADOS estadoActual = StateManager.getEstado(stateObs, this.posBolaAnterior, this.mapaObstaculos);
-    	estadoActual.incrementa();
+    	String estadoActual = StateManager.getEstado(stateObs, this.posBolaAnterior, this.mapaObstaculos);
+
     	if(verbose) System.out.println("\t\t\tEstado actual: " + estadoActual.toString());
     	
 
@@ -150,7 +156,7 @@ public class TrainingAgent extends AbstractPlayer {
     	if(verbose)StateManager.pintaQTable(estadoActual);
     	
     	// Seleccionar una entre las posibles acciones desde el estado actual
-    	ACCIONES action;
+    	ACTIONS action;
     	
     	
 //    	// Criterio de selección: random hasta 1/3 iteraciones
@@ -165,7 +171,7 @@ public class TrainingAgent extends AbstractPlayer {
     	if(randomPolicy) {
 	    	
 	        int index = randomGenerator.nextInt(numAccionesPosibles);
-	        action = StateManager.ACCIONES.values()[index];
+	        action = StateManager.ACCIONES[index];
     	}
     	else // Criterio seleccion: maxQ
     	{
@@ -176,27 +182,25 @@ public class TrainingAgent extends AbstractPlayer {
     	if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());
         
         // Calcular el siguiente estado habiendo eleggetEstadoFuturoido esa acción
-    	ESTADOS estadoSiguiente = StateManager.getEstadoFuturo(stateObs, posBolaAnterior, mapaObstaculos);
-    	if(verbose) System.out.println("ESTADO SIGUIENTE: " + estadoSiguiente.toString());
+    	StateObservation stateObsFuture = stateObs.copy();
+    	stateObsFuture.advance(action);
+    	String estadoSiguiente = StateManager.getEstadoFuturo(stateObsFuture, posBola);
+    	if(verbose) System.out.println("ESTADO SIGUIENTE: " + estadoSiguiente);
     
         // Using this possible action, consider to go to the next state
-        double q = StateManager.Q.get(new ParEstadoAccion(estadoActual, action));
+        double q = getQ(estadoActual, action);
     	if(verbose) System.out.println("Consulto q actual Q<" + estadoActual.toString() +","+action.toString()+"> = " + q);
 
-        double maxQ = maxQ(estadoSiguiente);
+        double maxQ = maxQ(estadoSiguiente, randomPolicy);
         //int r = StateManager.R.get(new ParEstadoAccion(estadoActual, action));
-        int r = StateManager.R.get(new ParEstadoAccion(estadoSiguiente, action));
+        int r = getR(estadoSiguiente);
         
         double value = q + alpha * (r + gamma * maxQ - q);
         
         // Actualizamos la tabla Q
-        StateManager.Q.put(new ParEstadoAccion(estadoActual, action), value);
- 		 
-		
-		if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());
-		StateManager.actua(action);
-		
-		
+        actualizaQ(estadoActual, action, value);
+        
+        if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());		
 		
 	  	//if(stateObs.isGameOver()) this.saveQTable(); //Guardamos la tablaQ si termina el juego
 	  	
@@ -208,26 +212,24 @@ public class TrainingAgent extends AbstractPlayer {
 //				e.printStackTrace();
 //			}
 		
-		ACTIONS mov = StateManager.getMovimiento(stateObs, posBolaAnterior, this.mapaObstaculos);
-		if(verbose) System.out.println("MOVMIENTO: " + mov);
+		
 		
 		posBolaAnterior = posBolaActual;
 		
-    	if(mov.equals(stateObs.getAvatarLastAction())) StateManager.contadorNIL++;
-    	else StateManager.contadorNIL = 0;
+
 		
-        return mov;
+        return action;
     }
 	
-	private double maxQ(ESTADOS s) {
-        ACCIONES[] actions = StateManager.ACCIONES.values();
+	private double maxQ(String s, boolean randomPolicy) {
+
         double maxValue = Double.MIN_VALUE;
         
-        for (int i = 0; i < actions.length; i++) {
+        for (int i = 0; i < StateManager.ACCIONES.length; i++) {
         	
         	//if(verbose) System.out.print("maxQ<"+ s.toString() + "," );
         	//if(verbose) System.out.print(actions[i]+"> = ");
-            double value = StateManager.Q.get(new ParEstadoAccion(s, actions[i]));
+            double value = getQ(s,StateManager.ACCIONES[i]);
             //if(verbose) System.out.println(value);
  
             if (value > maxValue)
@@ -236,4 +238,51 @@ public class TrainingAgent extends AbstractPlayer {
         
         return maxValue;
     }
+	
+	private int getR(String s)
+	{
+		if(StateManager.R.containsKey(s)) // Si existe recompensa
+			return StateManager.R.get(s);
+		else								// SI no existe recompensa para ese estado
+			return 0;
+	}
+	
+	private double getQ(String s, ACTIONS a)
+	{
+		if(StateManager.Q.containsKey(s))  //Existe entrada para el estado actual
+			return StateManager.Q.get(s)[StateManager.getIndAccion(a)];
+		
+		else { // Crea la entrada a random
+			actualizaQ(s, a,  new Random().nextDouble()*100);
+			return getQ(s, a);
+		}
+//		else	// Crea la entrada a cero
+//			actualizaQ(s, a,  0, false);
+//			return getQ(s, a, false);
+	}
+	
+	private void actualizaQ(String s, ACTIONS a, double value)
+	{
+		if(StateManager.Q.containsKey(s)) { //Existe entrada para el estado actual
+			
+			double [] Qs = StateManager.Q.get(s); // Obtenemos la fila de qs actuales
+	        Qs[StateManager.getIndAccion(a)] = value; // Actualizamos la casilla 
+	        StateManager.Q.put(s, Qs); // Actualizamos la fila en la tabla Q
+		}
+		else //Primera vez que se percibe el estado
+		{
+			double[] qNuevo = new double[StateManager.numAcciones];
+			
+			for (int i = 0; i < qNuevo.length; i++) {
+				double valor = new Random().nextDouble()*100;
+				
+				qNuevo[i] = valor;
+			}
+			
+			qNuevo[StateManager.getIndAccion(a)] = value; // Valor a actualizar
+			StateManager.Q.put(s, qNuevo); //Cremos la fila en la tabla Q
+		}
+	}
+	
+	
 }

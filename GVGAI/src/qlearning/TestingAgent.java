@@ -9,8 +9,7 @@ import core.game.StateObservation;
 import core.player.AbstractPlayer;
 import ontology.Types;
 import ontology.Types.ACTIONS;
-import qlearning.StateManager.ACCIONES;
-import qlearning.StateManager.ESTADOS;
+
 
 import tools.ElapsedCpuTimer;
 import tools.Vector2d;
@@ -63,7 +62,7 @@ public class TestingAgent extends AbstractPlayer {
 		
 		//vidaAnterior = so.getAvatarHealthPoints();
 		posBolaAnterior = new Vector2d(-1,-1);
-    	numAccionesPosibles = StateManager.ACCIONES.values().length;
+    	numAccionesPosibles = StateManager.ACCIONES.length;
     }
 
     /**
@@ -78,6 +77,10 @@ public class TestingAgent extends AbstractPlayer {
     	// 						01 - PERCEPCIÓN DEL ENTORNO
     	// -----------------------------------------------------------------------
     	//int vidaActual = stateObs.getAvatarHealthPoints();
+    	
+    	// SI no hay bola, la lanza automáticamente. (No es objeto de aprendizaje)
+    	if(!StateManager.hayBola(stateObs))
+    		return ACTIONS.ACTION_USE;
     	
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
     	int[] posJugador = StateManager.getIndiceMapa(pos); // Indice del mapa
@@ -95,8 +98,8 @@ public class TestingAgent extends AbstractPlayer {
     	if(verbose) StateManager.pintaMapaObstaculos(mapaObstaculos);
     	
     	// Percibimos el estado actual e incrementamos su contador
-    	ESTADOS estadoActual = StateManager.getEstado(stateObs, posBolaAnterior, this.mapaObstaculos);
-    	estadoActual.incrementa();
+    	String estadoActual = StateManager.getEstado(stateObs, posBolaAnterior, this.mapaObstaculos);
+
     	
     	// -----------------------------------------------------------------------
     	// 				ALGORITMO Q LEARNING EXPLOTACION DE LA TABLA Q
@@ -104,8 +107,8 @@ public class TestingAgent extends AbstractPlayer {
     	if(verbose) StateManager.pintaQTable(estadoActual);
     	
     	// Criterio seleccion: maxQ
-    	ACCIONES action = StateManager.getAccionMaxQ(estadoActual);
-    	StateManager.actua(action);
+    	ACTIONS action = StateManager.getAccionMaxQ(estadoActual);
+
     	if(verbose) System.out.println("\t\t\t\tEstado actual: " + estadoActual.toString());
     	if(verbose) System.out.println("\t\t\t\t--> DECIDE HACER: " + action.toString());
    
@@ -122,12 +125,34 @@ public class TestingAgent extends AbstractPlayer {
 //		
 		
 		
-		ACTIONS mov = StateManager.getMovimiento(stateObs, posBolaAnterior, this.mapaObstaculos);
-		if(verbose) System.out.println("MOVMIENTO: " + mov);
+
 		
 		posBolaAnterior = posBolaActual;
 		
-        return mov;
+        return action;
     }
+    
+    static double getQ(String s, ACTIONS a)
+	{
+		if(StateManager.Q.containsKey(s))  //Existe entrada para el estado actual
+			return StateManager.Q.get(s)[StateManager.getIndAccion(a)];
+		
+		else { // Crea la entrada a random
+			double[] qNuevo = new double[StateManager.numAcciones];
+			
+			for (int i = 0; i < qNuevo.length; i++) {
+				double valor = new Random().nextDouble()*100;
+				
+				qNuevo[i] = valor;
+			}
+			
+			StateManager.Q.put(s, qNuevo); //Cremos la fila en la tabla Q
+			return qNuevo[StateManager.getIndAccion(a)];
+		}
+
+	}
+	
+
+	
 } 
     

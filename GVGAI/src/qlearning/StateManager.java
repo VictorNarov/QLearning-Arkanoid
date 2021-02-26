@@ -32,7 +32,7 @@ public class StateManager {
 	Random randomGenerator;
 	
 	public static int contadorNIL = 0;
-	private static ESTADOS estadoAnterior = ESTADOS.NIL;
+	private static String estadoAnterior = "";
 	//public static int numObjetivos;
 
 	
@@ -41,67 +41,74 @@ public class StateManager {
 	public static int numFilas;
 	
 	// Diccionario ESTADOS-BOOLEAN, que indicará si un estado ha sido capturado en imagen
-	public static HashMap <ESTADOS, Boolean> diccionarioEstadoCaptura = new HashMap <ESTADOS, Boolean> ();
+//	public static HashMap <ESTADOS, Boolean> diccionarioEstadoCaptura = new HashMap <ESTADOS, Boolean> ();
 	
 	/* Contenedor de constantes para identificar los estados */
-	public static enum ESTADOS {
-		ATRAPADO_IZQDA(0),
-		ATRAPADO_DCHA(0),
-		ATRAPADO_MEDIO(0),
-		ATRAPADO_IZQDA_CERCA(0),
-		ATRAPADO_DCHA_CERCA(0),
-		CONSIGUE_PUNTOS(0),
-		NO_CONSIGUE_PUNTOS(0),
-		HUECO_DCHA(0),
-		HUECO_IZQDA(0),
-		HUECO_MEDIO(0),
-		NIL(0);
+//	public static enum ESTADOS {
+//		// UBICACIÓN POS INTERES (IZQDA, CENTRO, DERECHA) , DISTANCIA (MUY CERCA, CERCA, LEJOS, MUY LEJOS), VELOCIDAD DE APROXIMACIÓN(BAJA, MEDIA, ALTA), SENTIDO(POS, NEG), HUECO(IZQDA, CENTRO, DERECHA)
+//		IZQDA_MUYCERCA_BAJADCHA(0), 
+//		IZQDA_MUYCERCA_ALTADCHA(0),
+//		IZQDA_MUYCERCA_MEDIADCHA(0),
+//		ATRAPADO_IZQDA(0),
+//		ATRAPADO_DCHA(0),
+//		ATRAPADO_MEDIO(0),
+//		ATRAPADO_IZQDA_CERCA(0),
+//		ATRAPADO_DCHA_CERCA(0),
+//		CONSIGUE_PUNTOS(0),
+//		NO_CONSIGUE_PUNTOS(0),
+//		HUECO_DCHA(0),
+//		HUECO_IZQDA(0),
+//		HUECO_MEDIO(0),
+//		NIL(0);
 
+		
 		private int contador; //Cuenta cada vez que se percibe ese estado
 		
-		ESTADOS(int c) { this.contador = c; }
+//		ESTADOS(int c) { this.contador = c; }
 		
-		ESTADOS(){	this.contador = 0; }
+//		ESTADOS(){	this.contador = 0; }
 		
 		public void incrementa() { this.contador++; }
 		
 		public int getContador(){ return this.contador;}
 		
 		// Devuelve el enum ESTADOS al que se corresponde la cadena pasada por parametro
-		public static ESTADOS buscaEstado(String nombreEstado)
-		{
-			for(ESTADOS s : ESTADOS.values()) {
-				if(s.toString().equals(nombreEstado))
-					return s;
-			}
-			
-			return null;
-		}
-	}
+//		public static ESTADOS buscaEstado(String nombreEstado)
+//		{
+//			for(ESTADOS s : ESTADOS.values()) {
+//				if(s.toString().equals(nombreEstado))
+//					return s;
+//			}
+//			
+//			return null;
+//		}
+//	}
 	
-	public static enum ACCIONES
-	{
-		NIL,		//No cambia el parámetro desplazamiento
-		DESP_IZQDA,	//Ajusta el desplazamiento al valor minimo
-		DESP_DCHA,	//Ajusta el desplazamiento al valor máximmo
-		DESP_MEDIO,	//Valor intermedio
-		DESP_ALEATORIO	//Valor aleatorio
-	}
-	
+//	public static enum ACCIONES
+//	{
+//		NIL,		//No cambia el parámetro desplazamiento
+//		DESP_IZQDA,	//Ajusta el desplazamiento al valor minimo
+//		DESP_DCHA,	//Ajusta el desplazamiento al valor máximmo
+//		DESP_MEDIO,	//Valor intermedio
+//		DESP_ALEATORIO	//Valor aleatorio
+//	}
+//	
 	// Acciones posibles
-	public static final ACTIONS[] MOVIMIENTOS = {ACTIONS.ACTION_USE, ACTIONS.ACTION_LEFT, ACTIONS.ACTION_RIGHT, ACTIONS.ACTION_NIL};
+	public static final ACTIONS[] ACCIONES = {ACTIONS.ACTION_LEFT, ACTIONS.ACTION_RIGHT, ACTIONS.ACTION_NIL};
 	
 	//Direcciones
 	public enum DIRECCIONES{IZQDA, DCHA, MEDIO};
 	
-	public static HashMap<ParEstadoAccion, Integer> R; // TABLA R
-	public static HashMap<ParEstadoAccion, Double> Q; // TABLA Q
+	public static HashMap<String, Integer> R; // TABLA R
+	public static HashMap<String, double[]> Q = new HashMap<String, double[]>(); // TABLA Q
+	
+	public static HashMap<String, Integer> contadoresEstados = new HashMap<String, Integer>(); 
 		
 	/* Variables */
 	//private static char mapaObstaculos[][];
 	//private static Vector2d posActual;
-	private int numEstados = ESTADOS.values().length;
-	private int numAcciones = ACCIONES.values().length;
+//	private int numEstados = 360;
+	static int numAcciones = ACCIONES.length;
 	
 	// Variables prediccion trayectoria
 	private static double desplazamiento = 35;
@@ -118,13 +125,13 @@ public class StateManager {
 		randomGenerator = new Random();
 		inicializaTablaR();
 		
-		inicializaTablaQ(randomTablaQ);
+		//inicializaTablaQ(randomTablaQ);
 		
 		StateManager.verbose = verbose;
 		
-		for(ESTADOS estado : StateManager.ESTADOS.values()) {
-			diccionarioEstadoCaptura.put(estado, false);
-		}
+//		for(ESTADOS estado : StateManager.ESTADOS.values()) {
+//			diccionarioEstadoCaptura.put(estado, false);
+//		}
 	}
 	
 	public StateManager(String ficheroTablaQ, boolean verbose)
@@ -133,7 +140,7 @@ public class StateManager {
 		
 		randomGenerator = new Random();
 		inicializaTablaR();
-		inicializaTablaQ(true);
+		//inicializaTablaQ(true);
 		cargaTablaQ(ficheroTablaQ);
 		
 		StateManager.verbose = verbose;
@@ -168,69 +175,33 @@ public class StateManager {
 // ---------------------------------------------------------------------
 	private void inicializaTablaR()
 	{
-		R = new HashMap<ParEstadoAccion, Integer>(numEstados*numAcciones);
-		
-		// Inicializamos todas las recompensas a cero
-		// excepto la de obtener gasolina y esquivar obstaculos, que serán premiadas
-		
-		for (ESTADOS estado: ESTADOS.values()) 
-			for(ACCIONES accion : ACCIONES.values())
-			{
-				int valorR = 0;
-				
-				if(estado.toString().startsWith("ATRAPADO") && accion.equals(ACCIONES.NIL))
-					valorR = -50;
-								
-//				if(estado.equals(ESTADOS.NIL))
-//					valorR = -50;
-			
-				R.put(new ParEstadoAccion(estado,accion), valorR);
-			}
-		
-//		// Premiamos mandar la bola hacia el hueco
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_IZQDA, ACCIONES.DESP_IZQDA), 20);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_MEDIO, ACCIONES.DESP_MEDIO), 20);
-		R.put(new ParEstadoAccion(ESTADOS.HUECO_DCHA, ACCIONES.DESP_DCHA), 20);
-		
-		// Premiamos desatascar la bola
-//		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_DCHA_CERCA, ACCIONES.DESP_ALEATORIO), 100);
-//		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_IZQDA_CERCA, ACCIONES.DESP_ALEATORIO), 100);
-//		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_MEDIO, ACCIONES.DESP_ALEATORIO), 100);
-		
-		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_DCHA, ACCIONES.DESP_MEDIO), -50);
-		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_IZQDA, ACCIONES.DESP_MEDIO), -50);
-		R.put(new ParEstadoAccion(ESTADOS.ATRAPADO_MEDIO, ACCIONES.DESP_MEDIO), -50);
-		
-//		
-//		// Premiamos seguir haciendo  lo que ha hecho si consigue puntos
-		R.put(new ParEstadoAccion(ESTADOS.CONSIGUE_PUNTOS, ACCIONES.NIL), 10);
-		R.put(new ParEstadoAccion(ESTADOS.NO_CONSIGUE_PUNTOS, ACCIONES.DESP_ALEATORIO), 5);
-		R.put(new ParEstadoAccion(ESTADOS.NIL, ACCIONES.NIL), 5);
+		R = new HashMap<String, Integer>();
+
 	}
 	
 	/*
 	 * Inializamos la TablaQ
 	 */
-	private void inicializaTablaQ(boolean random)
-	{
-		Q = new HashMap<ParEstadoAccion, Double>(numEstados*numAcciones);
-		
-		if(random) {
-			/* Inicializamos todos los valores Q a random */
-			for (ESTADOS estado: ESTADOS.values()) 
-				for(ACCIONES accion : ACCIONES.values())			
-					Q.put(new ParEstadoAccion(estado,accion), (randomGenerator.nextDouble()+1) * 50);
-		}
-		else {
-			/* Inicializamos todos los valores Q a cero */
-			for (ESTADOS estado: ESTADOS.values()) 
-				for(ACCIONES accion : ACCIONES.values()) {
-					Q.put(new ParEstadoAccion(estado,accion), 0.0);
-					//System.out.println(estado.toString() + "," + accion.toString() + " = 0.0");
-				}
-		}
-						
-	}
+//	private void inicializaTablaQ(boolean random)
+//	{
+//		Q = new HashMap<ParEstadoAccion, Double>();
+//		
+//		if(random) {
+//			/* Inicializamos todos los valores Q a random */
+//			for (ESTADOS estado: ESTADOS.values()) 
+//				for(ACCIONES accion : ACCIONES.values())			
+//					Q.put(new ParEstadoAccion(estado,accion), (randomGenerator.nextDouble()+1) * 50);
+//		}
+//		else {
+//			/* Inicializamos todos los valores Q a cero */
+//			for (ESTADOS estado: ESTADOS.values()) 
+//				for(ACCIONES accion : ACCIONES.values()) {
+//					Q.put(new ParEstadoAccion(estado,accion), 0.0);
+//					//System.out.println(estado.toString() + "," + accion.toString() + " = 0.0");
+//				}
+//		}
+//						
+//	}
 	/**
 	 * Si no le indicamos el nombre del fichero, usa uno por defecto.
 	 */
@@ -254,19 +225,19 @@ public class StateManager {
 			buffer.append("ESTADOS");
 			buffer.append(";");
 			
-			for( ACCIONES accion : StateManager.ACCIONES.values() ) {
+			for(ACTIONS accion : StateManager.ACCIONES ) {
 				buffer.append( accion.toString() );
 				buffer.append(";");
 			}
 			
 			buffer.append("\n");
 			
-			for ( ESTADOS estado: ESTADOS.values() ) {
+			for (String estado: Q.keySet()) {
 				buffer.append(estado.toString());
 				buffer.append(";");
 
-				for( ACCIONES accion : StateManager.ACCIONES.values() ) {
-					double value = StateManager.Q.get(new ParEstadoAccion(estado, accion));
+				for(int i=0; i<numAcciones; i++){
+					double value = StateManager.Q.get(estado)[i];
 					
 					buffer.append( '"' + Double.toString(value).replace('.', ',') + '"');
 					buffer.append(";");
@@ -298,11 +269,11 @@ public class StateManager {
 			String linea = fichero.nextLine();
 			String [] cabecera = linea.split(";");
 			
-			ACCIONES[] actions = new ACCIONES[cabecera.length];
+			ACTIONS[] actions = new ACTIONS[cabecera.length];
 						
 			for(int i = 1; i<cabecera.length; i++)
 			{
-				for(ACCIONES a : ACCIONES.values())
+				for(ACTIONS a : ACCIONES)
 				{
 					if(verbose) System.out.println("NOMBRE ACCION: " + a.toString());
 					if(a.toString().equals(cabecera[i])) {
@@ -321,12 +292,17 @@ public class StateManager {
 	
 				
 				//Según el estado
-				ESTADOS estado = ESTADOS.buscaEstado(campos[0]);
+				String estado = campos[0];
 				
 				
 				//Por cada celda, le metemos el valor Q reemplazando coma por punto
+				double[] qNuevo = new double[numAcciones];
+		
 				for(int i=1; i<campos.length; i++)
-					Q.put(new ParEstadoAccion(estado,actions[i]), Double.parseDouble(campos[i].replace(',', '.').replace('"', Character.MIN_VALUE)));
+					qNuevo[i] = Double.parseDouble(campos[i].replace(',', '.').replace('"', Character.MIN_VALUE));
+				
+				Q.put(estado, qNuevo);
+					
 					
 			}
 			
@@ -337,18 +313,20 @@ public class StateManager {
 		}
 	}
 
-	public static ACCIONES getAccionMaxQ(ESTADOS s)
+	public static ACTIONS getAccionMaxQ(String s)
 	{
-		 ACCIONES[] actions = StateManager.ACCIONES.values(); // Acciones posibles
-         ACCIONES accionMaxQ = ACCIONES.NIL;
+		 ACTIONS actions[] = StateManager.ACCIONES; // Acciones posibles
+         ACTIONS accionMaxQ = ACTIONS.ACTION_NIL;
          
          double maxValue = Double.NEGATIVE_INFINITY; // - inf
+         
+         double filaQ[] = StateManager.Q.get(s);
 	        
-	        for (int i = 0; i < actions.length; i++) {
+	        for (int i = 0; i < filaQ.length; i++) {
 	        	
 	        	//if(verbose) System.out.print("Actual maxQ<"+ s.toString() + "," );
 	        	//if(verbose) System.out.print(actions[i]+"> = ");
-	            double value = StateManager.Q.get(new ParEstadoAccion(s, actions[i]));
+	            double value = filaQ[i];
 	            //if(verbose) System.out.println(value);
 	 
 	            if (value > maxValue) {
@@ -360,7 +338,7 @@ public class StateManager {
 	        if(maxValue == 0) // Inicialmente estan a 0, una random
 	        {
 	        	
-        	  int index = new Random().nextInt(StateManager.ACCIONES.values().length-1);
+        	  int index = new Random().nextInt(StateManager.ACCIONES.length-1);
 	          accionMaxQ = actions[index];
 		        
 	        }
@@ -372,13 +350,18 @@ public class StateManager {
 //  METODOS PERCEPCION ESTADOS
 //_____________________________________________________________________
 
-	public static ESTADOS getEstadoFuturo(StateObservation obs, Vector2d posBolAnt, char[][] mapaObs)
+	public static String getEstadoFuturo(StateObservation obs, Vector2d posBolAnt)
 	{	
 		//Instancia para predecir el estado sin alterar las variables actuales de StateManager
 		StatePredict statePredict = new StatePredict(); 
-		ESTADOS estado = ESTADOS.NIL;
-		int contador = 0;
+		
+		char [][] mapaObs = getMapaObstaculos(obs);
+		String estado = statePredict.getEstado(obs, posBolAnt, mapaObs);
+		
+		
+//		int contador = 0;
 		//System.out.println("HOLAAA");
+/*
 		do
 		{
 			Vector2d posBola = getPosBolaReal(obs);
@@ -393,17 +376,17 @@ public class StateManager {
 			
 			contador++;
 			//System.out.println(contador + "\t" + estado + "\t" + action + " equals=" + estado.equals(ESTADOS.NIL) + " over = " + obs.isGameOver());
-		}while(estado.equals(ESTADOS.NIL) && !obs.isGameOver() && contador <= 500 && estado.toString().startsWith("HUECO"));
+		}while(estado.equals("") && !obs.isGameOver() && contador <= 500 && estado.toString().startsWith("HUECO"));
 		
 		 //System.out.println("Calculado estado futuro en "+contador+" iteraciones: "+estado);
-		
+*/	
 		
 		return estado;
 	}
 	
-	public static ESTADOS getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
+	public static String getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
-		ESTADOS estado = ESTADOS.NIL;
+		StringBuilder estado = new StringBuilder(new String(new char[4]).replace("\0", "9")); //Inicializamos a todo 9
 				
 		if(primeraVez) { //Localiza los huecos en las filas de osbtauclos del mapa
 			 huecos = getHuecos(mapaObstaculos);
@@ -416,78 +399,98 @@ public class StateManager {
 		Vector2d posBola = getPosBolaReal(obs);
 		Vector2d posActual = obs.getAvatarPosition();
 
-			
-		golpeaMuro(posBola, posBolaAnterior);
+		double[] celdaPosBola = getCeldaPreciso(posBola, obs.getWorldDimension());
+		double[] celdaPosBolaAnterior = getCeldaPreciso(posBolaAnterior, obs.getWorldDimension());
+		double[] celdaPosActual = getCeldaPreciso(posActual, obs.getWorldDimension());
+		
+		double velocidadJugador = obs.getAvatarOrientation().x*obs.getAvatarSpeed();
+		//double aceleracion = velocidadJugador - velocidadAnterior;
+		//velocidadAnterior = velocidadJugador;
+		
+		ACTIONS ultimaAccion = obs.getAvatarLastAction();
+		
+		// Recalculamos el limite de las paredes del mapa
+		if(posBola.x > xmax)
+			xmax = posBola.x;
+		
+		if(posBola.x > 0 && posBola.x < xmin)
+			xmin = posBola.x;
+		
+		
+		if (verbose) System.out.println("POS ACTUAL = " + celdaPosActual[0]+"-"+celdaPosActual[1]);
+		if(verbose) System.out.println("POSICION REAL: " + obs.getAvatarPosition().toString());		
+		if(verbose) System.out.printf("CeldaBolaAnterior = \t{%f, %f}\nCeldaBolaActual = \t{%f, %f} \n", celdaPosBolaAnterior[0],celdaPosBolaAnterior[1],celdaPosBola[0],celdaPosBola[1]);
+		if(verbose) System.out.printf("BolaAnterior = \t{%f, %f}\nBolaActual = \t{%f, %f} \n", posBolaAnterior.x,posBolaAnterior.y,posBola.x,posBola.y);
+		if(verbose) System.out.println("VELOCIDAD = " + velocidadJugador);
+		if(verbose) System.out.println("ULTIMA ACT = " + ultimaAccion);
+		//if(verbose) System.out.println("ACELERACION = " + aceleracion);
+		if(verbose) System.out.println("VELOCIDAD BOLA= " + getVelocidadBola(posBola, posBolaAnterior));
+		
+		
+		golpeaMuro(posBola, posBolaAnterior); // Actualizamos la zona donde golpea el muro (si lo hace)
 		//System.out.println("huecos" + huecos.size());
 		double scoreActual = obs.getGameScore();
-		if(scoreActual > scoreAnterior)
-		{
-			if(verbose) System.out.println("Aumenta la puntuación!");
-			numVecesSinPuntos = 0;
-			scoreAnterior = scoreActual;
-			estado = ESTADOS.CONSIGUE_PUNTOS;
-		}
-		
+
+		// Dígito 1: UBICACIÓN
 		// Percibimos el estado segun el hueco si lo hay
-		else if(huecos.size() > 0 )//&& huecos.size() < 4
-			estado = getEstadoDirHueco(mapaObstaculos);
+		if(huecos.size() > 0 )//&& huecos.size() < 4
+			estado.setCharAt(1, getEstadoDirHueco(mapaObstaculos)); 
 		else// Si el mapa no tiene huecos o tiene muchos, busca la direccion de la mediana de los objetivos
-			estado = getEstadoDirObjetivo(mapaObstaculos);
+			estado.setCharAt(1, getEstadoDirObjetivo(mapaObstaculos));
 		
-		if(!estado.equals(ESTADOS.CONSIGUE_PUNTOS)//&& huecos.size() >=4 
-				
-				&& estadoAnterior.toString().startsWith("ATRAPADO"))
-			estado = estadoAnterior;
+		// Digito 0: UBICACIÓN POS INTERÉS PELOTA
+		// Digito 2: DISTANCIA POS INTERÉS
+		double distanciaBola = Math.sqrt(posActual.sqDist(posBola));
+		if(verbose) System.out.println("Hay bola DISTANCIA: "+distanciaBola); 
 		
-		
-		
-		if(!estado.equals(ESTADOS.CONSIGUE_PUNTOS) && golpeaBola(posBola, posBolaAnterior))
+		if(estaBajandoBola(celdaPosBola, celdaPosBolaAnterior) && distanciaBola > 30)
 		{
-			if(verbose) System.out.println("Golpea la bola");
+			if(verbose) System.out.println("Bola bajando." ); 
 			
+			double ColSueloBola = getColPredict(obs, posBolaAnterior);
 			
-			if(scoreActual == scoreAnterior) // No ha roto ningun ladrillo
-			{
-				if(verbose) System.out.println("No ha roto ningun ladrillo");
-				numVecesSinPuntos++;
-				
-				if(numVecesSinPuntos >= 2) {
-					if(verbose)System.out.println("Se queda pillado más de 2 veces rebotando en "+posReboteLadrillo.toString());
-					//numVecesSinPuntos=0;
-					if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x <= 2*xmax/10)
-						estado = ESTADOS.ATRAPADO_IZQDA_CERCA;
-					else if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && posActual.x > 2*xmax/10)
-						estado = ESTADOS.ATRAPADO_IZQDA;
-					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x >= 8*xmax/10 )
-						estado = ESTADOS.ATRAPADO_DCHA_CERCA;
-					else if(posReboteLadrillo.equals(DIRECCIONES.DCHA) && posActual.x < 8*xmax/10 )
-						estado = ESTADOS.ATRAPADO_DCHA;
-					else
-						estado = ESTADOS.ATRAPADO_MEDIO;
-					numVecesSinPuntos=0;
-				}
-				else
-					estado = ESTADOS.NO_CONSIGUE_PUNTOS;
-		
-			} // Gana puntos
-//			else {
-//
-//
-//				
-//
-//				scoreAnterior = scoreActual;
-//				estado = ESTADOS.CONSIGUE_PUNTOS;
-//				
-				
-//			}
-				
+			//Obtenemos la posicion de la trayectoria y la distancia a la posicion predicha
+			char posDistTrayectoriaBolaTrayectoriaBola[] = getEstadoTrayectoriaDistanciaBola(posActual, ColSueloBola);
+			
+			estado.setCharAt(0, posDistTrayectoriaBolaTrayectoriaBola[0]);
+			estado.setCharAt(2, posDistTrayectoriaBolaTrayectoriaBola[1]);
+		}
+		else //Bola sube
+		{
+			
+			//Obtenemos la posicion de la bola y la distancia en columnas
+			char posDistBola[] = getEstadoPosDistBola(posActual, posBola);
+			
+			estado.setCharAt(0, posDistBola[0]);
+			estado.setCharAt(2, posDistBola[1]);
 		}
 		
-		estadoAnterior = estado;
-		return estado;
+		
+		
+		// Dígito 3: VELOCIDAD DE LA PLATAFORMA
+		estado.setCharAt(3, getEstadoVelocidadJugador(velocidadJugador));
+		
+		String estadoPercibido = estado.toString();
+		
+		estadoAnterior = estadoPercibido;
+		
+		//Incrementamos su contador
+		//System.out.println(estadoPercibido);
+		if(contadoresEstados.containsKey(estadoPercibido)) {
+			int c = contadoresEstados.get(estadoPercibido);
+			contadoresEstados.put(estadoPercibido, ++c);
+		}
+		else //Primera vez percibido
+			contadoresEstados.put(estadoPercibido, 1);
+			
+		
+		return estadoPercibido;
 		
 	}
-	
+
+
+
+/*
 	public static ACTIONS getMovimiento(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
 		//int vidaActual = obs.getAvatarHealthPoints();
@@ -576,24 +579,38 @@ public class StateManager {
 			return ACTIONS.ACTION_USE;
 			
 	}
-
-	static ACTIONS getMovimientoBola(StateObservation obs)
+*/
+	static char[] getEstadoPosDistBola(Vector2d posActual, Vector2d Bola)
 	{
-		Vector2d posBola = getPosBolaReal(obs);	
-		Vector2d posActual = obs.getAvatarPosition();
+		double colBola = Bola.x;	
+		double colJugador = posActual.x;
+		double longPlataforma = 70;
+		double distancia = colBola - colJugador;
+		char pos;
+		char dist;
 		
-		if(posBola.x == posActual.x)
-			return ACTIONS.ACTION_NIL;
-		else if(posBola.x > posActual.x)
-			return ACTIONS.ACTION_RIGHT;
+		if(distancia >= 0 && distancia <= longPlataforma)
+			pos = '1'; //dentro del margen de la plataforma
+		else if(colBola > colJugador)
+			pos = '2'; //dcha
 		else
-			return ACTIONS.ACTION_LEFT;
+			pos = '0'; //izqda
+		
+		if(Math.abs(distancia) <= 150)
+			dist = '3'; // cerca
+		else if(Math.abs(distancia) <= 300)
+			dist = '4'; // lejos
+		else
+			dist = '5'; // muy lejos
 
+		return new char[] {pos,dist};
+		
 	}
 	
 	/*
 	 * Aplica la accón pasada por parámetro
 	 */
+	/*
 	public static void actua(ACCIONES action)
 	{
 		if(action.equals(ACCIONES.DESP_IZQDA))
@@ -608,6 +625,7 @@ public class StateManager {
 		else if(action.equals(ACCIONES.DESP_ALEATORIO))
 			desplazamiento = new Random().nextInt(70);
 	}
+	*/
 	
 	static boolean hayBola(StateObservation obs)
 	{
@@ -811,9 +829,9 @@ public class StateManager {
 	}
 	
 
-	static ESTADOS getEstadoDirHueco(char mapaObstaculos[][])
+	static char getEstadoDirHueco(char mapaObstaculos[][])
 	{
-		ESTADOS dirHueco = ESTADOS.NIL;
+		char dirHueco = '9';
 		double centroideObjetivos[] = getCentroideObjetivos(mapaObstaculos);
 		double minDistancia = Double.POSITIVE_INFINITY;
 		int huecoMenorDistancia = -1;
@@ -830,35 +848,34 @@ public class StateManager {
 		
 		int tercio = numCol / 3;
 		if(huecoMenorDistancia <= tercio)
-			dirHueco = ESTADOS.HUECO_IZQDA;
+			dirHueco = '0'; // Izqda
 		
 		else if(huecoMenorDistancia > tercio && huecoMenorDistancia < 2*tercio)
-			dirHueco = ESTADOS.HUECO_MEDIO;
+			dirHueco = '1'; // Centro
 					
-		else dirHueco = ESTADOS.HUECO_DCHA;
+		else dirHueco = '2'; //Dcha
 					
 		//if(verbose) System.out.println("Hueco más cercano encontrado en la parte: " + dirHueco);
 		return dirHueco;
 	}
 	
-	static ESTADOS getEstadoDirObjetivo(char mapaObstaculos[][])
+	static char getEstadoDirObjetivo(char mapaObstaculos[][])
 	{
-		ESTADOS dirObjetivo = ESTADOS.NIL;
+		char dirObjetivo = '9';
 		int mediana = getMedianaObjetivos(mapaObstaculos);
 		
 		int tercio = numCol / 3;
 		if(mediana <= tercio)
-			dirObjetivo = ESTADOS.HUECO_IZQDA;
+			dirObjetivo = '0'; //izqda
 		
 		else if(mediana > tercio && mediana < 2*tercio)
-			dirObjetivo = ESTADOS.HUECO_MEDIO;
+			dirObjetivo = '1'; //medio
 					
-		else dirObjetivo = ESTADOS.HUECO_DCHA;
+		else dirObjetivo = '2'; //dcha
 					
 		if(verbose) System.out.println("Mediana objetivos encontrado en la parte: " + dirObjetivo);
 		return dirObjetivo;
 	}
-	
 	
 	static double getColPredict(StateObservation obs, Vector2d posBolaAnterior)
 	{
@@ -923,10 +940,45 @@ public class StateManager {
 		
 	}
 	
-	static ACTIONS getMovimientoTrayectoriaBola(Vector2d posActual, double colCorteBola, double velocidadJugador, ACTIONS ultimaAccion)
+	static char[] getEstadoTrayectoriaDistanciaBola(Vector2d posActual, double colCorteBola)
 	{
 		double colJugador = posActual.x;
+		double longPlataforma = 70;
+		char posTrayectoriaBola;
+		char disTrayectoriaBola;
+		
+		double distancia = colCorteBola - colJugador;
+		
 		if(verbose)System.out.println(colJugador + ":::::" + colCorteBola);
+		
+		if(distancia >= 0 && distancia <= longPlataforma) // Dentro de la zona de golpeo de la plataforma
+		{
+			posTrayectoriaBola = '1'; //centro
+			
+			if(distancia <= longPlataforma / 3)
+				disTrayectoriaBola = '0'; // muy cerca izqda
+			else if (distancia <= longPlataforma / 3 *2)
+				disTrayectoriaBola = '1'; // muy cerca centro
+			else
+				disTrayectoriaBola = '2'; // muy cerca dcha
+		}
+		else
+		{
+			if(colCorteBola < colJugador)
+				posTrayectoriaBola = '0'; //izqda
+			else
+				posTrayectoriaBola = '2'; //dcha
+			
+			if(Math.abs(distancia) <= 150)
+				disTrayectoriaBola = '3'; // cerca
+			else if(Math.abs(distancia) <= 300)
+				disTrayectoriaBola = '4'; // lejos
+			else
+				disTrayectoriaBola = '5'; // muy lejos
+		}
+		
+		return new char[] {posTrayectoriaBola,disTrayectoriaBola};
+		
 		//colCorteBola = colCorteBola -10;
 		
 		
@@ -936,24 +988,24 @@ public class StateManager {
 //		if(colJugador >= colCorteBola-20 && colJugador <= colCorteBola+20 && velocidadJugador < -10)
 //			return ESTADOS.BOLA_DCHA;
 		
-		if(colJugador >= colCorteBola-25 && colJugador <= colCorteBola+25 ) {
-			if (velocidadJugador > 5)
-				return ACTIONS.ACTION_LEFT;
-			else if (velocidadJugador < -5)
-				return ACTIONS.ACTION_RIGHT;
-			else
-				return ACTIONS.ACTION_NIL;
-		}
-		else if( colCorteBola < xmin || colCorteBola > xmax) {
-			if(verbose)System.out.println("xmin: " + xmin + " xmax: " + xmax);
-			return ACTIONS.ACTION_NIL;
-		}
-			
-		else if(colJugador < colCorteBola)
-			return ACTIONS.ACTION_RIGHT;
-		
-		else
-			return ACTIONS.ACTION_LEFT;
+//		if(colJugador >= colCorteBola-25 && colJugador <= colCorteBola+25 ) {
+//			if (velocidadJugador > 5)
+//				return '0';//izqda
+//			else if (velocidadJugador < -5)
+//				return '2';//dcha
+//			else
+//				return '1';//centro
+//		}
+//		else if( colCorteBola < xmin || colCorteBola > xmax) {
+//			if(verbose)System.out.println("xmin: " + xmin + " xmax: " + xmax);
+//			return '1';//centro
+//		}
+//			
+//		else if(colJugador < colCorteBola)
+//			return '2';//dcha
+//		
+//		else
+//			return '0';//izqda
 	}
 	
 	private static double getVelocidadBola(Vector2d posBola, Vector2d posBolaAnterior)
@@ -961,6 +1013,19 @@ public class StateManager {
 		return Math.sqrt(Math.pow((posBola.x - posBolaAnterior.x), 2) + Math.pow((posBola.y - posBolaAnterior.y), 2));
 	}
 
+	static char getEstadoVelocidadJugador(double velocidad)
+	{
+		if(velocidad <= 3)
+			return '0'; // muy baja
+		else if(velocidad <= 5)
+			return '1'; //  baja
+		else if(velocidad <= 15)
+			return '2'; //media
+		else if(velocidad <= 25)
+			return '3'; // alta
+		else
+			return '4'; // muy alta
+	}
 	static boolean golpeaBola(Vector2d posBola, Vector2d posBolaAnterior)
 	{
 		return(posBola.y >= posBolaAnterior.y  && posBola.y>=420 && posBola.y<=440);
@@ -1009,9 +1074,9 @@ public class StateManager {
 	public void getContadoresEstados()
 	{
 		System.out.println("____________ CONTADORES ESTADOS _____________________");
-		for (ESTADOS s : ESTADOS.values()) {
+		for (String s : contadoresEstados.keySet()) {
 			
-			System.out.println(s.toString() + " : " + s.getContador());
+			System.out.println(s.toString() + " : " + contadoresEstados.get(s));
 		}
 	}
 // _____________________________________________________________________
@@ -1297,17 +1362,16 @@ public class StateManager {
 // _____________________________________________________________________
 //  METODOS VISUALES
 //_____________________________________________________________________	
-	public static void pintaQTable(ESTADOS s)
+	public static void pintaQTable(String s)
 	{
-		ACCIONES[] actions = StateManager.ACCIONES.values();
-
+		
         System.out.println("----------Q TABLE -----------------");
         
-        for (int i = 0; i < actions.length; i++) {
-        	 System.out.print("Actual Q<"+ s.toString() + "," );
-        	 System.out.print(actions[i]+"> = ");
+        for (int i = 0; i < StateManager.ACCIONES.length; i++) {
+        	 System.out.print("Actual Q<"+ s + "," );
+        	 System.out.print(StateManager.ACCIONES[i]+"> = ");
         	
-        	double value = StateManager.Q.get(new ParEstadoAccion(s, actions[i]));
+        	double value = TestingAgent.getQ(s, ACCIONES[i]);
         	
             System.out.println(value);
         }
@@ -1318,15 +1382,14 @@ public class StateManager {
 	public static void pintaQTableResumen()
 	{
 		
-		ESTADOS[] estados = ESTADOS.values();
 		
         System.out.println("____________________ Q TABLE RESUMEN ______________________");
         
-        for (int i = 0; i < estados.length; i++) {
-        	ACCIONES accion = getAccionMaxQ(estados[i]);
-        	double q = StateManager.Q.get(new ParEstadoAccion(estados[i], accion));
+        for (String s : contadoresEstados.keySet()) {
+        	ACTIONS accion = getAccionMaxQ(s);
+        	double q = StateManager.Q.get(s)[getIndAccion(accion)];
         	
-        	 System.out.println("maxQ<"+ estados[i].toString() + "," + accion.toString() +"> = "+ q);
+        	 System.out.println("maxQ<"+ s + "," + accion.toString() +"> = "+ q);
       	
         }
 	        
@@ -1343,5 +1406,19 @@ public class StateManager {
     			System.out.print(mapaObstaculos[i][j]);
     	}
     	System.out.println();
+	}
+	/*
+	 * Obtiene el indice del vector de acciones de la accion pasada por parametro
+	 */
+	public static int getIndAccion(ACTIONS a)
+	{
+		int pos = -1;
+		int i=0;
+		while(pos == -1 && i < ACCIONES.length)
+			if(a.equals(ACCIONES[i]))
+				pos=i;
+			else
+				i++;
+		return pos;
 	}
 }

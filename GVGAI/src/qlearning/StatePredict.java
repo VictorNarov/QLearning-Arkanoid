@@ -5,7 +5,7 @@ import java.util.Random;
 import core.game.StateObservation;
 import ontology.Types.ACTIONS;
 import qlearning.StateManager.DIRECCIONES;
-import qlearning.StateManager.ESTADOS;
+
 import tools.Vector2d;
 
 public class StatePredict {
@@ -26,63 +26,62 @@ public class StatePredict {
 		this.numVecesSinPuntos = StateManager.numVecesSinPuntos;
 	}
 
-	public ESTADOS getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
+	public String getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
-		ESTADOS estado = ESTADOS.NIL;
+		StringBuilder estado = new StringBuilder(new String(new char[4]).replace("\0", "9")); //Inicializamos a todo 9
+		
 
 		posActual = obs.getAvatarPosition();
 		Vector2d posBola = StateManager.getPosBolaReal(obs);
-
+		double velocidadJugador = obs.getAvatarOrientation().x*obs.getAvatarSpeed();
 			
 		this.golpeaMuro(posBola, posBolaAnterior);
 		
+		// Dígito 1: UBICACIÓN POS INTERÉS MAPA
 		// Percibimos el estado segun el hueco si lo hay
 		if(StateManager.huecos.size() > 0)
-			estado = StateManager.getEstadoDirHueco(mapaObstaculos);
+			estado.setCharAt(1, StateManager.getEstadoDirHueco(mapaObstaculos)); 
 		else// Si el mapa no tiene huecos, busca el centroide de los objetivos
-			estado = StateManager.getEstadoDirObjetivo(mapaObstaculos);
+			estado.setCharAt(1, StateManager.getEstadoDirObjetivo(mapaObstaculos));
 		
+		// Digito 0: UBICACIÓN POS INTERÉS PELOTA
+		// Digito 2: DISTANCIA POS INTERÉS
+		double distanciaBola = Math.sqrt(posActual.sqDist(posBola));
 		
-		if(StateManager.golpeaBola(posBola, posBolaAnterior))
+		// Esta bajando la bola
+		if(posBola.y > posBolaAnterior.y && distanciaBola > 30)
 		{
-	
-			double scoreActual = obs.getGameScore();
-			if(scoreActual == this.scoreAnterior) // No ha roto ningun ladrillo
-			{
-				this.numVecesSinPuntos++;
-				
-				if(this.numVecesSinPuntos >= 3) {
-					
-					if(posReboteLadrillo.equals(DIRECCIONES.IZQDA) && this.posActual.x <= 2*StateManager.xmax/10)
-						return ESTADOS.ATRAPADO_IZQDA_CERCA;
-					else if(this.posReboteLadrillo.equals(DIRECCIONES.IZQDA) && this.posActual.x > 2*StateManager.xmax/10)
-						return ESTADOS.ATRAPADO_IZQDA;
-					else if(this.posReboteLadrillo.equals(DIRECCIONES.DCHA) && this.posActual.x >= 8*StateManager.xmax/10 )
-						return ESTADOS.ATRAPADO_DCHA_CERCA;
-					else if(this.posReboteLadrillo.equals(DIRECCIONES.DCHA) && this.posActual.x < 8*StateManager.xmax/10 )
-						return ESTADOS.ATRAPADO_DCHA;
-					else
-						return ESTADOS.ATRAPADO_MEDIO;				
-				}
-				else
-					return ESTADOS.NO_CONSIGUE_PUNTOS;
-		
-			} // Gana puntos
-			else {
-				this.numVecesSinPuntos = 0;
-				this.scoreAnterior = scoreActual;
-				
-				return ESTADOS.CONSIGUE_PUNTOS;
-				
-				
-			}
-				
+			
+			double ColSueloBola = StateManager.getColPredict(obs, posBolaAnterior);
+			
+			//Obtenemos la posicion de la trayectoria y la distancia a la posicion predicha
+			char posDistTrayectoriaBolaTrayectoriaBola[] = StateManager.getEstadoTrayectoriaDistanciaBola(posActual, ColSueloBola);
+			
+			estado.setCharAt(0, posDistTrayectoriaBolaTrayectoriaBola[0]);
+			estado.setCharAt(2, posDistTrayectoriaBolaTrayectoriaBola[1]);
+		}
+		else //Bola sube
+		{
+			
+			//Obtenemos la posicion de la bola y la distancia en columnas
+			char posDistBola[] = StateManager.getEstadoPosDistBola(posActual, posBola);
+			
+			estado.setCharAt(0, posDistBola[0]);
+			estado.setCharAt(2, posDistBola[1]);
 		}
 		
-		return estado;
+		
+		
+		// Dígito 3: VELOCIDAD DE LA PLATAFORMA
+		estado.setCharAt(3, StateManager.getEstadoVelocidadJugador(velocidadJugador));
+		
+
+
+		return estado.toString();
 		
 	}
-	
+
+	/*
 	public ACTIONS getMovimiento(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
 		Vector2d posActual = obs.getAvatarPosition();
