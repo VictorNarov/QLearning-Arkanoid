@@ -99,7 +99,7 @@ public class StateManager {
 	//Direcciones
 	public enum DIRECCIONES{IZQDA, DCHA, MEDIO};
 	
-	public static HashMap<String, Integer> R; // TABLA R
+	//public static HashMap<String, Integer> R; // TABLA R
 	public static HashMap<String, double[]> Q = new HashMap<String, double[]>(); // TABLA Q
 	
 	public static HashMap<String, Integer> contadoresEstados = new HashMap<String, Integer>(); 
@@ -123,7 +123,7 @@ public class StateManager {
 		if(verbose) System.out.println("Inicializando tablas Q y R.....");
 		
 		randomGenerator = new Random();
-		inicializaTablaR();
+		//inicializaTablaR();
 		
 		//inicializaTablaQ(randomTablaQ);
 		
@@ -139,7 +139,7 @@ public class StateManager {
 		if(verbose) System.out.println("Inicializando tablas Q y R.....");
 		
 		randomGenerator = new Random();
-		inicializaTablaR();
+		//inicializaTablaR();
 		//inicializaTablaQ(true);
 		cargaTablaQ(ficheroTablaQ);
 		
@@ -173,9 +173,70 @@ public class StateManager {
 // ---------------------------------------------------------------------
 //  					METODOS TABLAS APRENDIZAJE
 // ---------------------------------------------------------------------
-	private void inicializaTablaR()
+	static double getR(String estado)
 	{
-		R = new HashMap<String, Integer>();
+		double recompensa = 0;
+		
+		if(estado.charAt(0) == '1') // Pelota dentro margen de la plataforma
+			recompensa +=10;
+		
+		if(estado.charAt(2) == '3') // Distancia a la pelota cerca
+			recompensa += 10;
+		
+		else if(estado.charAt(2) == '0') { // Va a golpear con parte izqda
+			if(estado.charAt(1) == '0') // Hueco izqda
+				recompensa += 50;
+			else if(estado.charAt(1) == '1') // Hueco medio
+				recompensa += 25;
+			else
+				recompensa += 20; //Hueco dcha
+		
+		}
+		else if(estado.charAt(2) == '1') { // Va a golpear con parte centro
+			if(estado.charAt(1) == '0') // Hueco izqda
+				recompensa += 25;
+			else if(estado.charAt(1) == '1') // Hueco medio
+				recompensa += 50;
+			else
+				recompensa += 25; //Hueco dcha
+		
+		}
+		else if(estado.charAt(2) == '2') { // Va a golpear con parte derecha
+			if(estado.charAt(1) == '0') // Hueco izqda
+				recompensa += 20;
+			else if(estado.charAt(1) == '1') // Hueco medio
+				recompensa += 25;
+			else
+				recompensa += 50; //Hueco dcha
+		
+		}
+		
+		//Distancia cerca y velocidad de aproximación media
+		if(estado.charAt(2) == '3' && estado.charAt(3) == '2')
+			recompensa += 20;
+		
+		//Distancia cerca o menor y velocidad alta: CASTIGO
+		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '3')
+			recompensa -= 75;
+		
+		//Distancia cerca o menor y velocidad muy alta: CASTIGO+
+		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '4')
+			recompensa -= 100;
+		
+		//Distancia cerca  y velocidad baja: PREMIO
+		else if(estado.charAt(2) == '3' && estado.charAt(3) == '1')
+			recompensa += 50;
+		
+		//Distancia muy cerca  y velocidad baja: PREMIO
+		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '1')
+			recompensa += 25;
+		
+		//Distancia muy cerca  y velocidad muy baja: PREMIO+
+		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '0')
+			recompensa += 100;
+		
+		return recompensa;
+		
 
 	}
 	
@@ -313,6 +374,9 @@ public class StateManager {
 		}
 	}
 
+	/*
+	 * Obtiene la acción de mayor valor Q para el estado pasado por parámetro
+	 */
 	public static ACTIONS getAccionMaxQ(String s)
 	{
 		 ACTIONS actions[] = StateManager.ACCIONES; // Acciones posibles
@@ -320,13 +384,12 @@ public class StateManager {
          
          double maxValue = Double.NEGATIVE_INFINITY; // - inf
          
-         double filaQ[] = StateManager.Q.get(s);
-	        
-	        for (int i = 0; i < filaQ.length; i++) {
+        
+	        for (int i = 0; i < numAcciones; i++) {
 	        	
 	        	//if(verbose) System.out.print("Actual maxQ<"+ s.toString() + "," );
 	        	//if(verbose) System.out.print(actions[i]+"> = ");
-	            double value = filaQ[i];
+	            double value = getQ(s,ACCIONES[i]);
 	            //if(verbose) System.out.println(value);
 	 
 	            if (value > maxValue) {
@@ -345,6 +408,73 @@ public class StateManager {
 	        
 	        return accionMaxQ;
 	}
+	
+	/*
+	 * Obtiene el valor de la Tabla Q dado un estado y acción.
+	 * Si no existe, crea la fila y devuelve su valor inicial random.
+	 */
+	static double getQ(String s, ACTIONS a)
+	{
+		if(StateManager.Q.containsKey(s))  //Existe entrada para el estado actual
+			return StateManager.Q.get(s)[StateManager.getIndAccion(a)];
+		
+		else { // Crea la entrada a random
+			creaQ(s);
+			return getQ(s, a);
+		}
+
+	}
+	
+	/*
+	 * Crea una fila de la tabla Q a random
+	 */
+	static void creaQ(String s)
+	{
+		double[] qNuevo = new double[StateManager.numAcciones];
+		
+		for (int i = 0; i < qNuevo.length; i++) {
+			double valor = new Random().nextDouble()*100;
+			
+			qNuevo[i] = valor;
+		}
+
+		StateManager.Q.put(s, qNuevo); //Cremos la fila en la tabla Q
+	}
+	
+	/*
+	 * Actualiza el valor de la tabla Q(estado,accion)
+	 */
+	static void actualizaQ(String s, ACTIONS a, double value)
+	{
+		if(!StateManager.Q.containsKey(s))//NO Existe entrada para el estado actual
+			creaQ(s);
+		
+		double [] Qs = StateManager.Q.get(s); // Obtenemos la fila de qs actuales
+        Qs[StateManager.getIndAccion(a)] = value; // Actualizamos la casilla 
+        StateManager.Q.put(s, Qs); // Actualizamos la fila en la tabla Q
+		
+	}
+	
+	/*
+	 * Obtiene el valor mayor de Q para el estado pasado por parámetro
+	 */
+	static double maxQ(String s) {
+
+        double maxValue = Double.MIN_VALUE;
+        
+        for (int i = 0; i < StateManager.ACCIONES.length; i++) {
+        	
+        	//if(verbose) System.out.print("maxQ<"+ s.toString() + "," );
+        	//if(verbose) System.out.print(actions[i]+"> = ");
+            double value = getQ(s,StateManager.ACCIONES[i]);
+            //if(verbose) System.out.println(value);
+ 
+            if (value > maxValue)
+                maxValue = value;
+        }
+        
+        return maxValue;
+    }
 		
 // _____________________________________________________________________
 //  METODOS PERCEPCION ESTADOS
@@ -755,9 +885,12 @@ public class StateManager {
 					objetivos.add(i);
 				}
 		
-		// Devolvemos la mediana
-		Collections.sort(objetivos);
-		return objetivos.get((int)objetivos.size()/2);
+		if(objetivos.size() > 0) {
+			// Devolvemos la mediana
+			Collections.sort(objetivos);
+			return objetivos.get((int)objetivos.size()/2);
+		}
+		else return -1;
 							
 	}
 	
@@ -951,7 +1084,7 @@ public class StateManager {
 		
 		if(verbose)System.out.println(colJugador + ":::::" + colCorteBola);
 		
-		if(distancia >= 0 && distancia <= longPlataforma) // Dentro de la zona de golpeo de la plataforma
+		if(distancia >= 0 && distancia <= longPlataforma+20 || distancia < 0 && Math.abs(distancia) <= 20) // Dentro de la zona de golpeo de la plataforma
 		{
 			posTrayectoriaBola = '1'; //centro
 			

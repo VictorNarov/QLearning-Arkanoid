@@ -19,8 +19,8 @@ public class TrainingAgent extends AbstractPlayer {
 	boolean verbose = StateManager.verbose;
 	
 	/* Parametros del Aprendizaje */
-	private double alpha = 0.01; // Factor Exploracion tamaño del paso
-	private double gamma = 0.8; // Factor descuento recompensa futura
+	private double alpha = 0.1; // Factor Exploracion tamaño del paso
+	private double gamma = 0.7; // Factor descuento recompensa futura
 
 	
 	boolean randomPolicy=true; // RandomPolicy o MaxQ
@@ -188,17 +188,19 @@ public class TrainingAgent extends AbstractPlayer {
     	if(verbose) System.out.println("ESTADO SIGUIENTE: " + estadoSiguiente);
     
         // Using this possible action, consider to go to the next state
-        double q = getQ(estadoActual, action);
+        double q = StateManager.getQ(estadoActual, action);
     	if(verbose) System.out.println("Consulto q actual Q<" + estadoActual.toString() +","+action.toString()+"> = " + q);
 
-        double maxQ = maxQ(estadoSiguiente, randomPolicy);
+        double maxQ = StateManager.maxQ(estadoSiguiente);
         //int r = StateManager.R.get(new ParEstadoAccion(estadoActual, action));
-        int r = getR(estadoSiguiente);
+        double r = StateManager.getR(estadoSiguiente);
+        
+        if(verbose) System.out.println("RECOMPENSA ("+estadoSiguiente+ ") ="+ r);
         
         double value = q + alpha * (r + gamma * maxQ - q);
         
         // Actualizamos la tabla Q
-        actualizaQ(estadoActual, action, value);
+        StateManager.actualizaQ(estadoActual, action, value);
         
         if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());		
 		
@@ -221,68 +223,9 @@ public class TrainingAgent extends AbstractPlayer {
         return action;
     }
 	
-	private double maxQ(String s, boolean randomPolicy) {
 
-        double maxValue = Double.MIN_VALUE;
-        
-        for (int i = 0; i < StateManager.ACCIONES.length; i++) {
-        	
-        	//if(verbose) System.out.print("maxQ<"+ s.toString() + "," );
-        	//if(verbose) System.out.print(actions[i]+"> = ");
-            double value = getQ(s,StateManager.ACCIONES[i]);
-            //if(verbose) System.out.println(value);
- 
-            if (value > maxValue)
-                maxValue = value;
-        }
-        
-        return maxValue;
-    }
 	
-	private int getR(String s)
-	{
-		if(StateManager.R.containsKey(s)) // Si existe recompensa
-			return StateManager.R.get(s);
-		else								// SI no existe recompensa para ese estado
-			return 0;
-	}
-	
-	private double getQ(String s, ACTIONS a)
-	{
-		if(StateManager.Q.containsKey(s))  //Existe entrada para el estado actual
-			return StateManager.Q.get(s)[StateManager.getIndAccion(a)];
-		
-		else { // Crea la entrada a random
-			actualizaQ(s, a,  new Random().nextDouble()*100);
-			return getQ(s, a);
-		}
-//		else	// Crea la entrada a cero
-//			actualizaQ(s, a,  0, false);
-//			return getQ(s, a, false);
-	}
-	
-	private void actualizaQ(String s, ACTIONS a, double value)
-	{
-		if(StateManager.Q.containsKey(s)) { //Existe entrada para el estado actual
-			
-			double [] Qs = StateManager.Q.get(s); // Obtenemos la fila de qs actuales
-	        Qs[StateManager.getIndAccion(a)] = value; // Actualizamos la casilla 
-	        StateManager.Q.put(s, Qs); // Actualizamos la fila en la tabla Q
-		}
-		else //Primera vez que se percibe el estado
-		{
-			double[] qNuevo = new double[StateManager.numAcciones];
-			
-			for (int i = 0; i < qNuevo.length; i++) {
-				double valor = new Random().nextDouble()*100;
-				
-				qNuevo[i] = valor;
-			}
-			
-			qNuevo[StateManager.getIndAccion(a)] = value; // Valor a actualizar
-			StateManager.Q.put(s, qNuevo); //Cremos la fila en la tabla Q
-		}
-	}
+
 	
 	
 }
