@@ -33,6 +33,9 @@ public class StateManager {
 	
 	public static int contadorNIL = 0;
 	static String estadoAnterior = "99999";
+	static StateObservation obsAnterior;
+	static double distanciaAnterior = 0;
+	static double distancia = 0;
 	//public static int numObjetivos;
 
 	
@@ -101,7 +104,7 @@ public class StateManager {
 	
 	//public static HashMap<String, Integer> R; // TABLA R
 	public static HashMap<String, double[]> Q = new HashMap<String, double[]>(); // TABLA Q
-	
+	public static HashMap<String, ACTIONS> QResumen = new HashMap<String, ACTIONS>(); // TABLA Q RESUMEN
 	public static HashMap<String, Integer> contadoresEstados = new HashMap<String, Integer>(); 
 		
 	/* Variables */
@@ -141,7 +144,11 @@ public class StateManager {
 		randomGenerator = new Random();
 		//inicializaTablaR();
 		//inicializaTablaQ(true);
-		cargaTablaQ(ficheroTablaQ);
+		
+		if(ficheroTablaQ.contains("Resumen"))
+			cargaTablaQResumen(ficheroTablaQ);
+		else
+			cargaTablaQ(ficheroTablaQ);
 		
 		StateManager.verbose = verbose;
 	}
@@ -176,82 +183,103 @@ public class StateManager {
 	static double getR(String estado, StateObservation obs)
 	{
 		double recompensa = 0;
+		double difDistancia = distanciaAnterior - distancia;
+		if(verbose) System.out.println(distanciaAnterior + " - " + distancia +" = "+ difDistancia);
 
-		if(estadoAnterior.charAt(2) >='3' && estado.charAt(2) < estadoAnterior.charAt(2)) { //Si se ha acercado a la bola
+		if(obs.getAvatarHealthPoints() < obsAnterior.getAvatarHealthPoints() &&
+				estado.charAt(2) <= '3') {
+			if(verbose)System.out.println("-300: PIERDE VIDA ESTADO CERCA");
+			recompensa -= 300;
+		}
+		
+		
+		
+		if(estadoAnterior.charAt(2) >='3' && distanciaAnterior > distancia) { //Si se ha acercado a la bola
 			if(verbose)System.out.println("+75: se ha acercado a la bola");
 			recompensa += 75;
 			
 		}
-		if(estado.charAt(2) <= '5' && estado.charAt(3) < estadoAnterior.charAt(3)) { // Si ha reducido la velocidad a poca distancia
-			recompensa += 75;
-			if(verbose)System.out.println("+75: poca distancia y ha reducido velocidad");
+		else if(distanciaAnterior > distancia) { //Si se ha acercado a la bola
+			if(verbose)System.out.println("+20: se ha acercado a la bola");
+			recompensa += 20;
+			
 		}
 		
-		//Si se ha alejado de la bola CASTIGO
-		if(estadoAnterior.charAt(2) >'3' && estado.charAt(2) > estadoAnterior.charAt(2) && estado.charAt(0) != '1') { 
-			recompensa -= 75;
-			if(verbose)System.out.println("-75: se ha alejado de la bola ");
+		if(estado.charAt(2) <= '3' && estado.charAt(3) < estadoAnterior.charAt(3)) { // Si ha reducido la velocidad a poca distancia
+			recompensa += 50;
+			if(verbose)System.out.println("+50: poca distancia y ha reducido velocidad");
 		}
+		
+//		//Si se ha alejado de la bola CASTIGO
+//		if(estadoAnterior.charAt(2) >='3' && distancia > distanciaAnterior) { 
+//			recompensa -= 75;
+//			if(verbose)System.out.println("-75: se ha alejado de la bola ");
+//		}
 		// No reduce distancia CASTIGO
-		else if(estadoAnterior.charAt(2) >'3' && estado.charAt(2) == estadoAnterior.charAt(2) && estado.charAt(0) != '1') { 
-				recompensa -= 30;
-				if(verbose)System.out.println("-30: no ha reducido distancia");
-			}
+//		else if(estadoAnterior.charAt(2) >='3' && Math.abs(difDistancia) < 5 && estado.charAt(0) != '1') { 
+//				recompensa -= 30;
+//				if(verbose)System.out.println("-30: no ha reducido distancia");
+//			}
 		
-		//Si ha dejado de estar en la zona de golpeo: CASTIGO
-		if(estadoAnterior.charAt(0) == '1' && estado.charAt(0) != '1') {
-			recompensa -= 200;
-			if(verbose)System.out.println("-200: ha dejado de estar en la zona de golpeo");
-		}
+//		//Si ha dejado de estar en la zona de golpeo: CASTIGO
+//		if(estadoAnterior.charAt(0) == '1' && estado.charAt(0) != '1') {
+//			recompensa -= 100;
+//			if(verbose)System.out.println("-100: ha dejado de estar en la zona de golpeo");
+//		}
 		//Si sigue estando en la zona de golpeo: PREMIO
 		if(estadoAnterior.charAt(0) == '1' && estado.charAt(0) == '1') {
 			recompensa += 50;
 			if(verbose)System.out.println("+50: sigue estando en la zona de golpeo");
 		}
 		//Si ha entrado en la zona de golpeo: PREMIO
-		if(estadoAnterior.charAt(0) != '1' && estado.charAt(0) == '1') {
-			recompensa += 250;
-			if(verbose)System.out.println("+250: ha entrado en la zona de golpeo");
+		else if(estadoAnterior.charAt(0) != '1' && estado.charAt(0) == '1') {
+			recompensa += 200;
+			if(verbose)System.out.println("+200: ha entrado en la zona de golpeo");
 		}
 		
 //		// Estar lejos y parado
-//		if(estado.charAt(2) >= '5' && estado.charAt(3) == '0') {
-//			recompensa -= 100;
-//			if(verbose)System.out.println("-100: esta lejos y parado");
-//		}
+		if(estado.charAt(2) >= '5' && estado.charAt(3) == '0') {
+			recompensa -= 100;
+			if(verbose)System.out.println("-100: esta lejos y parado");
+		}
 		// Lejos y empezar a moverse hacia la pelota
-		if(estado.charAt(2) >= '5' && estadoAnterior.charAt(3)=='0' && estado.charAt(3) == '1' && 
-				(obs.getAvatarOrientation().x==1 && estado.charAt(0)=='2' || obs.getAvatarOrientation().x==-1 && estado.charAt(0)=='0')) {
+	
+		
+		if(estado.charAt(2) >= '3' && estadoAnterior.charAt(3)=='0' && estado.charAt(3) == '1' && 
+				(estado.charAt(4)=='1' && estado.charAt(0)=='2' || estado.charAt(4)=='0' && estado.charAt(0)=='0')) {
 			recompensa += 50;
-			if(verbose)System.out.println("+50: estaba lejos y ha empezado a moverse");
+			if(verbose)System.out.println("+50: estaba lejos y ha empezado a moverse hacia el objetivo");
 		}
 		// Lejos y empezar a moverse en contra de la pelota
-		else if(estado.charAt(2) >= '5' && estadoAnterior.charAt(3)=='0' && estado.charAt(3) == '1' && 
-			(obs.getAvatarOrientation().x==1 && estado.charAt(0)=='0' || obs.getAvatarOrientation().x==-1 && estado.charAt(0)=='2')) {
+		else if(estado.charAt(2) >= '3' && estadoAnterior.charAt(3)=='0' && estado.charAt(3) == '1' && 
+			(estado.charAt(4)=='1' && estado.charAt(0)=='0' || estado.charAt(4)=='0' && estado.charAt(0)=='2')) {
 		recompensa -= 50;
 		if(verbose)System.out.println("-50: estaba lejos y ha empezado a moverse en contra del objetivo");
-	}
+		}
+		
 		// Lejos y aumenta velocidad hacia la pelota
-		else if(estado.charAt(2) >= '5' && estadoAnterior.charAt(3) < estado.charAt(3)  && 
-				(obs.getAvatarOrientation().x==1 && estado.charAt(0)=='2' || obs.getAvatarOrientation().x==-1 && estado.charAt(0)=='0')) {
-			recompensa += 35;
-			if(verbose)System.out.println("+35: aumenta velocidad hacia objetivo");
+		else if(estado.charAt(2) >= '3' && (
+				(getVelocidadJugador(obs) > getVelocidadJugador(obsAnterior) && estado.charAt(0)=='2') ||
+				(getVelocidadJugador(obs) < getVelocidadJugador(obsAnterior) && estado.charAt(0)=='0'))) {
+			recompensa += 100;
+			if(verbose)System.out.println("+50: aumenta velocidad hacia objetivo ("+getVelocidadJugador(obsAnterior)+"-"+getVelocidadJugador(obs)+")");
 		}
 		// Lejos y aumenta velocidad en contra de la pelota
-		else if(estado.charAt(2) >= '5' && estadoAnterior.charAt(3) < estado.charAt(3)  && 
-				(obs.getAvatarOrientation().x==1 && estado.charAt(0)=='0' || obs.getAvatarOrientation().x==-1 && estado.charAt(0)=='2')) {
-			recompensa -= 35;
-			if(verbose)System.out.println("-35: aumenta velocidad en contra del objetivo");
+		else if(estado.charAt(2) >= '3' && (
+				(getVelocidadJugador(obs) < getVelocidadJugador(obsAnterior) && estado.charAt(0)=='2') ||
+				(getVelocidadJugador(obs) > getVelocidadJugador(obsAnterior) && estado.charAt(0)=='0'))) {
+			recompensa -= 100;
+			if(verbose)System.out.println("-100: aumenta velocidad en contra del objetivo ("+getVelocidadJugador(obsAnterior)+"-"+getVelocidadJugador(obs)+")");
 		}
-		/*
+		
 		if(estado.charAt(0) == '1') // Pelota dentro margen de la plataforma
-			recompensa +=10;
+			recompensa +=20;
 		
 		if(estado.charAt(2) == '3') // Distancia a la pelota cerca
 			recompensa += 10;
 		
-		*/
-		if(estadoAnterior.charAt(2) <=2 && estado.charAt(2) == '0') { // Va a golpear con parte izqda
+		
+		if(estado.charAt(2) == '0') { // Va a golpear con parte izqda
 			if(estado.charAt(1) == '0') { // Hueco izqda
 				recompensa += 50;
 				if(verbose)System.out.println("+50: muy cerca izqda y hueco izqda");
@@ -267,7 +295,7 @@ public class StateManager {
 			}
 		
 		}
-		else if(estadoAnterior.charAt(2) <='2' && estado.charAt(2) == '1') { // Va a golpear con parte centro
+		else if(estado.charAt(2) == '1') { // Va a golpear con parte centro
 			if(estado.charAt(1) == '0') { // Hueco izqda
 				recompensa += 25;
 				if(verbose)System.out.println("+25: muy cerca centro y hueco izqda");
@@ -282,7 +310,7 @@ public class StateManager {
 			}
 		
 		}
-		else if(estadoAnterior.charAt(2) <='2' && estado.charAt(2) == '2') { // Va a golpear con parte derecha
+		else if(estado.charAt(2) == '2') { // Va a golpear con parte derecha
 			if(estado.charAt(1) == '0') { // Hueco izqda
 				recompensa += 20;
 				if(verbose)System.out.println("+20: muy cerca dcha y hueco izqda");
@@ -299,29 +327,29 @@ public class StateManager {
 		}
 
 		
-		//Distancia cerca y velocidad de aproximación media
-		if(estado.charAt(2) == '3' && estado.charAt(3) == '2') {
-			recompensa += 20;
-			if(verbose)System.out.println("+20: distancia cerca y velocidad media");
-		}
+//		//Distancia cerca y velocidad de aproximación media
+//		if(estado.charAt(2) == '3' && estado.charAt(3) == '2') {
+//			recompensa += 20;
+//			if(verbose)System.out.println("+20: distancia cerca y velocidad media");
+//		}
+//		
+//		//Distancia cerca o menor y velocidad alta: CASTIGO
+//		if(estado.charAt(2) <= '3' && estado.charAt(3) == '3') {
+//			recompensa -= 75;
+//			if(verbose)System.out.println("-75: distancia cerca o menor y velocidad alta");
+//		}
+//		
+//		//Distancia cerca o menor y velocidad muy alta: CASTIGO+
+//		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '4'){
+//			recompensa -= 100;
+//			if(verbose)System.out.println("-100: distancia cerca o menor y velocidad muy alta");
+//		}
 		
-		//Distancia cerca o menor y velocidad alta: CASTIGO
-		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '3') {
-			recompensa -= 75;
-			if(verbose)System.out.println("-75: distancia cerca o menor y velocidad alta");
-		}
-		
-		//Distancia cerca o menor y velocidad muy alta: CASTIGO+
-		else if(estado.charAt(2) <= '3' && estado.charAt(3) == '4'){
-			recompensa -= 100;
-			if(verbose)System.out.println("-100: distancia cerca o menor y velocidad muy alta");
-		}
-		
-		//Distancia cerca  y velocidad baja: PREMIO
-		else if(estado.charAt(2) == '3' && estado.charAt(3) == '1') {
-			recompensa += 50;
-			if(verbose)System.out.println("+30: distancia cerca y velocidad baja");
-		}
+//		//Distancia media  y velocidad baja: PREMIO
+//		else if(estado.charAt(2) == '3' && estado.charAt(3) == '1') {
+//			recompensa += 30;
+//			if(verbose)System.out.println("+30: distancia cerca y velocidad baja");
+//		}
 		
 		//Distancia muy cerca  y velocidad baja: PREMIO
 		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '1') {
@@ -373,6 +401,13 @@ public class StateManager {
 	}
 	
 	/**
+	 * Si no le indicamos el nombre del fichero, usa uno por defecto.
+	 */
+	public void saveQTableResumen() {
+		saveQTableResumen("TablaQResumen.csv");
+	}
+	
+	/**
 	 * Escribe la tabla Q del atributo de la clase en 
 	 * el fichero QTable.csv, para poder ser leída en 
 	 * una siguiente etapa de aprendizaje.
@@ -409,6 +444,42 @@ public class StateManager {
 				buffer.append("\n");
 			}
 			
+			csvFile.write(buffer.toString());
+			
+			if ( verbose ) System.out.println( " FICHERO GENERADO CORRECTAMENTE! " );
+			
+			csvFile.close();
+			
+	    } catch( Exception ex ) {
+	    	System.out.println(ex.getMessage());
+		}
+	}
+	
+	/**
+	 * Escribe la tabla Q del atributo de la clase en 
+	 * el fichero QTable.csv, para poder ser leída en 
+	 * una siguiente etapa de aprendizaje.
+	 */
+	public void saveQTableResumen(String fileName) 
+	{
+		/* Creación del fichero de salida */
+	    try (PrintWriter csvFile = new PrintWriter(new File(fileName))) {
+			
+			if( verbose ) System.out.println(" GENERANDO EL FICHERO DE LA TABLAQ RESUMEN... ");
+			
+			StringBuilder buffer = new StringBuilder();
+			buffer.append("ESTADOS");
+			buffer.append(";");
+			buffer.append("IND_MEJOR_ACCION");
+			buffer.append("\n");
+			
+			for (String estado: Q.keySet()) {
+				buffer.append(estado.toString());
+				buffer.append(";");	
+				buffer.append(getIndAccion(getAccionMaxQ(estado)));
+				buffer.append("\n");
+				}
+				
 			csvFile.write(buffer.toString());
 			
 			if ( verbose ) System.out.println( " FICHERO GENERADO CORRECTAMENTE! " );
@@ -467,6 +538,33 @@ public class StateManager {
 				Q.put(estado, qNuevo);
 					
 					
+			}
+			
+			fichero.close();
+	
+	    } catch( Exception ex ) {
+	    	System.out.println(ex.getMessage());
+		}
+	}
+
+	private void cargaTablaQResumen(String filename) {
+		
+		/* Creación del fichero de salida */
+	    try (Scanner fichero = new Scanner(new File(filename));){
+	    	
+			if( verbose ) System.out.println(" CARGANDO EL FICHERO DE LA TABLAQ RESUMEN: "+filename);
+				    	
+			String linea = fichero.nextLine();
+		
+			
+			while(fichero.hasNextLine())
+			{
+				linea = fichero.nextLine();
+				
+				String [] campos = linea.split(";");
+
+				QResumen.put(campos[0], ACCIONES[Integer.valueOf(campos[1])]);
+							
 			}
 			
 			fichero.close();
@@ -618,7 +716,7 @@ public class StateManager {
 	
 	public static String getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
-		StringBuilder estado = new StringBuilder(new String(new char[4]).replace("\0", "9")); //Inicializamos a todo 9
+		StringBuilder estado = new StringBuilder(new String(new char[5]).replace("\0", "9")); //Inicializamos a todo 9
 				
 		if(primeraVez) { //Localiza los huecos en las filas de osbtauclos del mapa
 			 huecos = getHuecos(mapaObstaculos);
@@ -708,10 +806,18 @@ public class StateManager {
 		// Dígito 3: VELOCIDAD DE LA PLATAFORMA
 		estado.setCharAt(3, getEstadoVelocidadJugador(velocidadJugador));
 		
+		// Dígito 4: ORIENTACIÓN DEL DESPLAZAMIENTO PLATAFORMA
+		if(obs.getAvatarOrientation().x == 1)
+			estado.setCharAt(4,'1'); // Se mueve derecha
+		else
+			estado.setCharAt(4,'0'); // Se mueve izqda
+		
+		
+		
+		
+
+		
 		String estadoPercibido = estado.toString();
-		
-		
-		
 		//Incrementamos su contador
 		//System.out.println(estadoPercibido);
 		if(contadoresEstados.containsKey(estadoPercibido)) {
@@ -824,6 +930,7 @@ public class StateManager {
 		double colJugador = posActual.x;
 		double longPlataforma = 70;
 		double distancia = colBola - colJugador;
+		StateManager.distanciaAnterior = Math.abs(distancia);
 		char pos;
 		char dist;
 		
@@ -834,20 +941,28 @@ public class StateManager {
 		else
 			pos = '0'; //izqda
 		
-		if(Math.abs(distancia) <= xmax * 0.15)
-			dist = '3'; // 10% mapa
-		else if(Math.abs(distancia) <= xmax * 0.25)
-			dist = '4'; // 15 % mapa
-		else if(Math.abs(distancia) <= xmax * 0.35)
-			dist = '5'; // 20 % mapa
-		else if(Math.abs(distancia) <= xmax * 0.5)
-			dist = '6'; // 30 % mapa
-		else if(Math.abs(distancia) <= xmax * 0.6)
-			dist = '7'; // 40 % mapa
-		else if(Math.abs(distancia) <= xmax * 0.7)
-			dist = '8'; // 50 % mapa
+		if(Math.abs(distancia) <= 150)
+			dist = '3'; // cerca
+		else if(Math.abs(distancia) <= 300)
+			dist = '4'; // lejos
 		else
-			dist = '9'; // > 50% mapa (MUY LEJOS)
+			dist = '5'; // muy lejos
+		
+//		
+//		if(Math.abs(distancia) <= xmax * 0.15)
+//			dist = '3'; // 10% mapa
+//		else if(Math.abs(distancia) <= xmax * 0.25)
+//			dist = '4'; // 15 % mapa
+//		else if(Math.abs(distancia) <= xmax * 0.35)
+//			dist = '5'; // 20 % mapa
+//		else if(Math.abs(distancia) <= xmax * 0.5)
+//			dist = '6'; // 30 % mapa
+//		else if(Math.abs(distancia) <= xmax * 0.6)
+//			dist = '7'; // 40 % mapa
+//		else if(Math.abs(distancia) <= xmax * 0.7)
+//			dist = '8'; // 50 % mapa
+//		else
+//			dist = '9'; // > 50% mapa (MUY LEJOS)
 
 		return new char[] {pos,dist};
 		
@@ -1197,10 +1312,10 @@ public class StateManager {
 		char disTrayectoriaBola;
 		
 		double distancia = colCorteBola - colJugador;
-		
+		StateManager.distanciaAnterior = Math.abs(distancia);
 		if(verbose)System.out.println(colJugador + ":::::" + colCorteBola);
 		
-		if(distancia >= 0 && distancia <= longPlataforma+20 || distancia < 0 && Math.abs(distancia) <= 20) // Dentro de la zona de golpeo de la plataforma
+		if(distancia >= 0 && distancia <= longPlataforma || distancia < 0 && Math.abs(distancia) <= 20) // Dentro de la zona de golpeo de la plataforma
 		{
 			posTrayectoriaBola = '1'; //centro
 			
@@ -1218,20 +1333,27 @@ public class StateManager {
 			else
 				posTrayectoriaBola = '2'; //dcha
 			
-			if(Math.abs(distancia) <= xmax * 0.15)
-				disTrayectoriaBola = '3'; // 10% mapa
-			else if(Math.abs(distancia) <= xmax * 0.25)
-				disTrayectoriaBola = '4'; // 15 % mapa
-			else if(Math.abs(distancia) <= xmax * 0.35)
-				disTrayectoriaBola = '5'; // 20 % mapa
-			else if(Math.abs(distancia) <= xmax * 0.5)
-				disTrayectoriaBola = '6'; // 30 % mapa
-			else if(Math.abs(distancia) <= xmax * 0.6)
-				disTrayectoriaBola = '7'; // 40 % mapa
-			else if(Math.abs(distancia) <= xmax * 0.7)
-				disTrayectoriaBola = '8'; // 50 % mapa
+//			if(Math.abs(distancia) <= xmax * 0.15)
+//				disTrayectoriaBola = '3'; // 10% mapa
+//			else if(Math.abs(distancia) <= xmax * 0.25)
+//				disTrayectoriaBola = '4'; // 15 % mapa
+//			else if(Math.abs(distancia) <= xmax * 0.35)
+//				disTrayectoriaBola = '5'; // 20 % mapa
+//			else if(Math.abs(distancia) <= xmax * 0.5)
+//				disTrayectoriaBola = '6'; // 30 % mapa
+//			else if(Math.abs(distancia) <= xmax * 0.6)
+//				disTrayectoriaBola = '7'; // 40 % mapa
+//			else if(Math.abs(distancia) <= xmax * 0.7)
+//				disTrayectoriaBola = '8'; // 50 % mapa
+//			else
+//				disTrayectoriaBola = '9'; // > 50% mapa (MUY LEJOS)
+			
+			if(Math.abs(distancia) <= 150)
+				disTrayectoriaBola = '3'; // cerca
+			else if(Math.abs(distancia) <= 300)
+				disTrayectoriaBola = '4'; // lejos
 			else
-				disTrayectoriaBola = '9'; // > 50% mapa (MUY LEJOS)
+				disTrayectoriaBola = '5'; // muy lejos
 		}
 		
 		return new char[] {posTrayectoriaBola,disTrayectoriaBola};
@@ -1268,6 +1390,11 @@ public class StateManager {
 	private static double getVelocidadBola(Vector2d posBola, Vector2d posBolaAnterior)
 	{
 		return Math.sqrt(Math.pow((posBola.x - posBolaAnterior.x), 2) + Math.pow((posBola.y - posBolaAnterior.y), 2));
+	}
+	
+	private static double getVelocidadJugador(StateObservation obs)
+	{
+		return obs.getAvatarSpeed() * obs.getAvatarOrientation().x;
 	}
 
 	static char getEstadoVelocidadJugador(double velocidad)

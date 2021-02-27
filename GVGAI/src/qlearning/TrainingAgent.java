@@ -19,8 +19,8 @@ public class TrainingAgent extends AbstractPlayer {
 	boolean verbose = StateManager.verbose;
 	
 	/* Parametros del Aprendizaje */
-	private double alpha = 0.2; // Factor Exploracion tamaño del paso
-	private double gamma = 0.1; // Factor descuento recompensa futura
+	private double alpha = 0.3; // Factor Exploracion tamaño del paso
+	private double gamma = 0.2; // Factor descuento recompensa futura
 
 	
 	boolean randomPolicy=true; // RandomPolicy o MaxQ
@@ -53,6 +53,7 @@ public class TrainingAgent extends AbstractPlayer {
         actions = so.getAvailableActions();
         inmov = so.getImmovablePositions();
         dim = so.getWorldDimension();
+        StateManager.obsAnterior = so;
 
         so.getBlockSize();
         
@@ -114,7 +115,7 @@ public class TrainingAgent extends AbstractPlayer {
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
     	int[] posJugador = StateManager.getIndiceMapa(pos); // Indice del mapa
     	Vector2d posBola = StateManager.getPosBolaReal(stateObs);
-    	
+    	StateManager.obsAnterior = stateObs; //Obs anterior para la recompensa del estado futuro
 
     		
     	

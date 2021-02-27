@@ -21,8 +21,8 @@ public class Test {
     	String QLearningTesting = "qlearning.TestingAgent";
 
     	double maxPuntuacionJuego[] = new double[] {110, 62, 98, 76, 50, 72, 62, 50, 140, 50, 16};
-    	int nivelesTraining[] = new int[] {3};
-    	int nivelesTest[] = new int[] {3};
+    	int nivelesTraining[] = new int[] {0, 1,2,3,4};
+    	int nivelesTest[] = new int[] {5,2,4};
 
 		//Load available games
 		String spGamesCollection =  "examples/all_games_sp.csv";
@@ -44,7 +44,7 @@ public class Test {
 		String recordActionsFile = null;// "actions_" + games[gameIdx] + "_lvl"
 	
 		
-		int levelIdx = 3; // level names from 0 to 4 (game_lvlN.txt).
+		int levelIdx = 4; // level names from 0 to 4 (game_lvlN.txt).
 		String level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 		StateManager stateManager;
 		
@@ -65,7 +65,7 @@ public class Test {
 			boolean randomTablaQ = true; // Verdadero: crea la tabla Q con valores random, si no, a cero
 			boolean guardarGrafica = true; // Si queremos guardar una imagen de la grafica Ticks/epoca
 			stateManager = new StateManager(randomTablaQ,false);
-			StateManager.numIteraciones = 2000; // Numero de partidas a jugar
+			StateManager.numIteraciones = 3000; // Numero de partidas a jugar
 
 			/*
 			 * Grafica Aprendizaje Resultado Score / Epoca
@@ -111,6 +111,8 @@ public class Test {
 			}
 		
 			stateManager.saveQTable();
+			stateManager.saveQTableResumen();
+			
 			if(guardarGrafica) {
 				String fecha = java.time.LocalDate.now().toString();
 				String nombreFich = fecha+"_GraficaScore.jpeg";
@@ -142,7 +144,7 @@ public class Test {
 				visuals = verbose;
 				double[] scorePartidas = new double[nivelesTest.length];
 				
-				stateManager = new StateManager("TablaQ.csv", verbose);
+				stateManager = new StateManager("TablaQResumen.csv", verbose);
 				for (int i = 0; i < nivelesTest.length; i++) {
 					levelIdx = nivelesTest[i]; // level names from 0 to 4 (game_lvlN.txt).
 					level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
@@ -153,7 +155,7 @@ public class Test {
 				System.out.println("____________________________________________________");
 				System.out.println("____________ ESTADÍSTICAS PARTIDAS _________________");
 				double total = 0;
-				for(int i = 0; i < nivelesTraining.length; i++) {
+				for(int i = 0; i < nivelesTest.length; i++) {
 						System.out.println("% JUEGO " + i + " =\t"+ scorePartidas[i]);
 						total += scorePartidas[i];
 				}
@@ -165,7 +167,7 @@ public class Test {
 		}
 		else // Modo Test, probar el nivel indicado
 		{
-			stateManager = new StateManager("TablaQ.csv", verbose);
+			stateManager = new StateManager("TablaQResumen.csv", verbose);
 			ArcadeMachine.runOneGame(game, level1, visuals, QLearningTesting, recordActionsFile, seed, 0);
 			System.out.println("xmax = "+ StateManager.xmax + " xmin = "+ StateManager.xmin);
 		}

@@ -85,6 +85,7 @@ public class TestingAgent extends AbstractPlayer {
     	
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
     	int[] posJugador = StateManager.getIndiceMapa(pos); // Indice del mapa
+    	StateManager.obsAnterior = stateObs; //Obs anterior para la recompensa del estado futuro
     	
     	//if(verbose) System.out.println("VIDA ACTUAL = "+vidaActual);
     	if(verbose) System.out.println("POSICION = " + posJugador[0] + "-" + posJugador[1]);
@@ -99,16 +100,25 @@ public class TestingAgent extends AbstractPlayer {
     	if(verbose) StateManager.pintaMapaObstaculos(mapaObstaculos);
     	
     	// Percibimos el estado actual e incrementamos su contador
-    	String estadoActual = StateManager.getEstado(stateObs, posBolaAnterior, this.mapaObstaculos);
 
     	
+    	String estadoActual = StateManager.getEstado(stateObs, posBolaAnterior, this.mapaObstaculos);
+    	
+    	
+
     	// -----------------------------------------------------------------------
     	// 				ALGORITMO Q LEARNING EXPLOTACION DE LA TABLA Q
     	// -----------------------------------------------------------------------
     	if(verbose) StateManager.pintaQTable(estadoActual);
     	
     	// Criterio seleccion: maxQ
-    	ACTIONS action = StateManager.getAccionMaxQ(estadoActual);
+    	ACTIONS action;
+    	
+    	if(StateManager.QResumen.containsKey(estadoActual))
+    		action = StateManager.QResumen.get(estadoActual);
+    	else //Si no se ha percibido ese estado en el training, hace una aleatoria
+    		action = StateManager.ACCIONES[new Random().nextInt(StateManager.numAcciones)]; 
+  
 
     	if(verbose) System.out.println("\t\t\t\tEstado: " + StateManager.estadoAnterior +" -> " + estadoActual);
     	if(verbose) System.out.println("\t\t\t\tRECOMPENSA = "+StateManager.getR(estadoActual, stateObs));
@@ -116,15 +126,15 @@ public class TestingAgent extends AbstractPlayer {
    
     	
     	
-	  	
-		if(verbose)
-			try {
-				Thread.sleep(250);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		
+//	  	
+//		if(verbose)
+//			try {
+//				Thread.sleep(50);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		
 		
 		
     	StateManager.estadoAnterior = estadoActual;

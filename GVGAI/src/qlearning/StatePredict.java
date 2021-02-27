@@ -28,7 +28,7 @@ public class StatePredict {
 
 	public String getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
-		StringBuilder estado = new StringBuilder(new String(new char[4]).replace("\0", "9")); //Inicializamos a todo 9
+		StringBuilder estado = new StringBuilder(new String(new char[5]).replace("\0", "9")); //Inicializamos a todo 9
 		
 
 		posActual = obs.getAvatarPosition();
@@ -55,7 +55,7 @@ public class StatePredict {
 			double ColSueloBola = StateManager.getColPredict(obs, posBolaAnterior);
 			
 			//Obtenemos la posicion de la trayectoria y la distancia a la posicion predicha
-			char posDistTrayectoriaBolaTrayectoriaBola[] = StateManager.getEstadoTrayectoriaDistanciaBola(posActual, ColSueloBola);
+			char posDistTrayectoriaBolaTrayectoriaBola[] = this.getEstadoTrayectoriaDistanciaBola(posActual, ColSueloBola);
 			
 			estado.setCharAt(0, posDistTrayectoriaBolaTrayectoriaBola[0]);
 			estado.setCharAt(2, posDistTrayectoriaBolaTrayectoriaBola[1]);
@@ -64,7 +64,7 @@ public class StatePredict {
 		{
 			
 			//Obtenemos la posicion de la bola y la distancia en columnas
-			char posDistBola[] = StateManager.getEstadoPosDistBola(posActual, posBola);
+			char posDistBola[] = this.getEstadoPosDistBola(posActual, posBola);
 			
 			estado.setCharAt(0, posDistBola[0]);
 			estado.setCharAt(2, posDistBola[1]);
@@ -75,7 +75,11 @@ public class StatePredict {
 		// Dígito 3: VELOCIDAD DE LA PLATAFORMA
 		estado.setCharAt(3, StateManager.getEstadoVelocidadJugador(velocidadJugador));
 		
-		
+		// Dígito 4: ORIENTACIÓN DEL DESPLAZAMIENTO PLATAFORMA
+		if(obs.getAvatarOrientation().x == 1)
+			estado.setCharAt(4,'1'); // Se mueve derecha
+		else
+			estado.setCharAt(4,'0'); // Se mueve izqda
 
 
 		return estado.toString();
@@ -156,6 +160,89 @@ public class StatePredict {
 				
 			this.posReboteLadrillo = dir;
 		}
+	}
+	
+	private char[] getEstadoTrayectoriaDistanciaBola(Vector2d posActual, double colCorteBola)
+	{
+		double colJugador = posActual.x;
+		double longPlataforma = 70;
+		char posTrayectoriaBola;
+		char disTrayectoriaBola;
+		
+		double distancia = colCorteBola - colJugador;
+		StateManager.distancia = Math.abs(distancia);
+		
+		if(distancia >= 0 && distancia <= longPlataforma || distancia < 0 && Math.abs(distancia) <= 20) // Dentro de la zona de golpeo de la plataforma
+		{
+			posTrayectoriaBola = '1'; //centro
+			
+			if(distancia <= longPlataforma / 3)
+				disTrayectoriaBola = '0'; // muy cerca izqda
+			else if (distancia <= longPlataforma / 3 *2)
+				disTrayectoriaBola = '1'; // muy cerca centro
+			else
+				disTrayectoriaBola = '2'; // muy cerca dcha
+		}
+		else
+		{
+			if(colCorteBola < colJugador)
+				posTrayectoriaBola = '0'; //izqda
+			else
+				posTrayectoriaBola = '2'; //dcha
+			
+			if(Math.abs(distancia) <= StateManager.xmax * 0.15)
+				disTrayectoriaBola = '3'; // 10% mapa
+			else if(Math.abs(distancia) <= StateManager.xmax * 0.25)
+				disTrayectoriaBola = '4'; // 15 % mapa
+			else if(Math.abs(distancia) <= StateManager.xmax * 0.35)
+				disTrayectoriaBola = '5'; // 20 % mapa
+			else if(Math.abs(distancia) <= StateManager.xmax * 0.5)
+				disTrayectoriaBola = '6'; // 30 % mapa
+			else if(Math.abs(distancia) <= StateManager.xmax * 0.6)
+				disTrayectoriaBola = '7'; // 40 % mapa
+			else if(Math.abs(distancia) <= StateManager.xmax * 0.7)
+				disTrayectoriaBola = '8'; // 50 % mapa
+			else
+				disTrayectoriaBola = '9'; // > 50% mapa (MUY LEJOS)
+		}
+		
+		return new char[] {posTrayectoriaBola,disTrayectoriaBola};
+	}
+	
+	private char[] getEstadoPosDistBola(Vector2d posActual, Vector2d Bola)
+	{
+		double colBola = Bola.x;	
+		double colJugador = posActual.x;
+		double longPlataforma = 70;
+		double distancia = colBola - colJugador;
+		StateManager.distancia = Math.abs(distancia);
+		char pos;
+		char dist;
+		
+		if(distancia >= 0 && distancia <= longPlataforma)
+			pos = '1'; //dentro del margen de la plataforma
+		else if(colBola > colJugador)
+			pos = '2'; //dcha
+		else
+			pos = '0'; //izqda
+		
+		if(Math.abs(distancia) <= StateManager.xmax * 0.15)
+			dist = '3'; // 10% mapa
+		else if(Math.abs(distancia) <= StateManager.xmax * 0.25)
+			dist = '4'; // 15 % mapa
+		else if(Math.abs(distancia) <= StateManager.xmax * 0.35)
+			dist = '5'; // 20 % mapa
+		else if(Math.abs(distancia) <= StateManager.xmax * 0.5)
+			dist = '6'; // 30 % mapa
+		else if(Math.abs(distancia) <= StateManager.xmax * 0.6)
+			dist = '7'; // 40 % mapa
+		else if(Math.abs(distancia) <= StateManager.xmax * 0.7)
+			dist = '8'; // 50 % mapa
+		else
+			dist = '9'; // > 50% mapa (MUY LEJOS)
+
+		return new char[] {pos,dist};
+		
 	}
 	
 }
