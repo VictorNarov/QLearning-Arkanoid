@@ -19,8 +19,8 @@ public class TrainingAgent extends AbstractPlayer {
 	boolean verbose = StateManager.verbose;
 	
 	/* Parametros del Aprendizaje */
-	private double alpha = 0.3; // Factor Exploracion tamaño del paso 0.3
-	private double gamma = 0.2; // Factor descuento recompensa futura 0.2
+	private double alpha = 0.1; // Factor Exploracion tamaño del paso 0.3
+	private double gamma = 0.7; // Factor descuento recompensa futura 0.2
 
 	
 	boolean randomPolicy=true; // RandomPolicy o MaxQ
@@ -167,9 +167,7 @@ public class TrainingAgent extends AbstractPlayer {
 //    		randomPolicy = true;
 //    	else
 //    		randomPolicy = false;
-    	
-    	
-    	
+
     	// Criterio de selección: random
     	if(randomPolicy) {
     		if(verbose) System.out.println("Elige acción aleatoria");
@@ -195,8 +193,9 @@ public class TrainingAgent extends AbstractPlayer {
     	if(verbose) System.out.println("Consulto q actual Q<" + estadoActual.toString() +","+action.toString()+"> = " + q);
 
         double maxQ = StateManager.maxQ(estadoSiguiente);
-        //int r = StateManager.R.get(new ParEstadoAccion(estadoActual, action));
-        double r = StateManager.getR(estadoSiguiente, stateObsFuture);
+        
+
+        double r = StateManager.getR(estadoSiguiente);
         
         if(verbose) System.out.println("MaxQ ("+estadoSiguiente+ ") ="+ maxQ);
         if(verbose) System.out.println("RECOMPENSA ("+estadoSiguiente+ ") ="+ r);
@@ -210,7 +209,7 @@ public class TrainingAgent extends AbstractPlayer {
         
         if(verbose) System.out.println("--> DECIDE HACER: " + action.toString());		
 		
-	  	//if(stateObs.isGameOver()) this.saveQTable(); //Guardamos la tablaQ si termina el juego
+
 	  	
 //		if(verbose)
 //			try {
@@ -226,7 +225,7 @@ public class TrainingAgent extends AbstractPlayer {
 		puntoInterrupcion=0;
 		}
         
-		StateManager.estadoAnterior = estadoActual;
+//		StateManager.estadoAnterior = estadoActual;
 		posBolaAnterior = posBolaActual;
 		
 

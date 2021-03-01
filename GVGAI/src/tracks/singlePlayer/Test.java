@@ -44,7 +44,7 @@ public class Test {
 		String recordActionsFile = null;// "actions_" + games[gameIdx] + "_lvl"
 	
 		
-		int levelIdx = 2; // level names from 0 to 4 (game_lvlN.txt).
+		int levelIdx = 5; // level names from 0 to 4 (game_lvlN.txt).
 		String level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 		StateManager stateManager;
 		
@@ -65,7 +65,7 @@ public class Test {
 			boolean randomTablaQ = true; // Verdadero: crea la tabla Q con valores random, si no, a cero
 			boolean guardarGrafica = true; // Si queremos guardar una imagen de la grafica Ticks/epoca
 			stateManager = new StateManager(randomTablaQ,false);
-			StateManager.numIteraciones = 100; // Numero de partidas a jugar
+			StateManager.numIteraciones = 1000; // Numero de partidas a jugar
 
 			/*
 			 * Grafica Aprendizaje Resultado Score / Epoca
@@ -92,8 +92,8 @@ public class Test {
 				levelIdx = nivelesTraining[new Random().nextInt(nivelesTraining.length)]; // level names from 0 to 4 (game_lvlN.txt).
 				level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 				
-				visuals = false; TrainingAgent.forzarMaxQ = false; //StateManager.verbose = false;
-				if(StateManager.iteracionActual % 25 == 0) { // Mostrar cada 25% partidas
+				visuals = false; TrainingAgent.forzarMaxQ = false; StateManager.verbose = false;
+				if(StateManager.iteracionActual % 250 == 0) { // Mostrar cada 25% partidas
 					visuals = true;
 					TrainingAgent.forzarMaxQ = true;
 					StateManager.verbose = true;

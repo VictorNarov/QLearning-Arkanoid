@@ -34,6 +34,8 @@ public class StatePredict {
 		posActual = obs.getAvatarPosition();
 		Vector2d posBola = StateManager.getPosBolaReal(obs);
 		double velocidadJugador = obs.getAvatarOrientation().x*obs.getAvatarSpeed();
+		StateManager.velocidad = velocidadJugador;
+		StateManager.vida = obs.getAvatarHealthPoints();
 			
 		this.golpeaMuro(posBola, posBolaAnterior);
 		

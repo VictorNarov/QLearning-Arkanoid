@@ -104,7 +104,7 @@ public class TestingAgent extends AbstractPlayer {
     	
     	String estadoActual = StateManager.getEstado(stateObs, posBolaAnterior, this.mapaObstaculos);
     	
-    	
+
 
     	// -----------------------------------------------------------------------
     	// 				ALGORITMO Q LEARNING EXPLOTACION DE LA TABLA Q
@@ -119,9 +119,15 @@ public class TestingAgent extends AbstractPlayer {
     	else //Si no se ha percibido ese estado en el training, hace una aleatoria
     		action = StateManager.ACCIONES[new Random().nextInt(StateManager.numAcciones)]; 
   
-
-    	if(verbose) System.out.println("\t\t\t\tEstado: " + StateManager.estadoAnterior +" -> " + estadoActual);
-    	if(verbose) System.out.println("\t\t\t\tRECOMPENSA = "+StateManager.getR(estadoActual, stateObs));
+    	/*
+    	 * NO NECESARIO SOLO DEBUG
+    	 */
+    	Vector2d posBola = StateManager.getPosBolaReal(stateObs);
+    	StateObservation stateObsFuture = stateObs.copy();
+    	stateObsFuture.advance(action);
+    	String estadoSiguiente = StateManager.getEstadoFuturo(stateObsFuture, posBola);
+//    	if(verbose) System.out.println("\t\t\t\tEstado: " + StateManager.estadoAnterior +" -> " + estadoActual);
+    	if(verbose) System.out.println("\t\t\t\tRECOMPENSA = "+StateManager.getR(estadoActual));
     	if(verbose) System.out.println("\t\t\t\t--> DECIDE HACER: " + action.toString());
    
     	
@@ -137,7 +143,7 @@ public class TestingAgent extends AbstractPlayer {
 //		
 		
 		
-    	StateManager.estadoAnterior = estadoActual;
+//    	StateManager.estadoAnterior = estadoActual;
 		posBolaAnterior = posBolaActual;
 		
         return action;

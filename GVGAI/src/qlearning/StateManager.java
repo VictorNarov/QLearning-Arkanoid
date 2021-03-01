@@ -32,70 +32,25 @@ public class StateManager {
 	Random randomGenerator;
 	
 	public static int contadorNIL = 0;
-	static String estadoAnterior = "99999";
+//	static String estadoAnterior = "99999";
 	static StateObservation obsAnterior;
+	
+	// Variables heuristica de recompensas
 	static double distanciaAnterior = 0;
+	static double velocidadAnterior = 0;
+	static int vidaAnterior = 0;
 	static double distancia = 0;
-	//public static int numObjetivos;
+	static double velocidad = 0;
+	static int vida = 0;
 
 	
+	//public static int numObjetivos;
+
 	//Variables comunes a varias clases
 	public static int numCol;
 	public static int numFilas;
 	
-	// Diccionario ESTADOS-BOOLEAN, que indicará si un estado ha sido capturado en imagen
-//	public static HashMap <ESTADOS, Boolean> diccionarioEstadoCaptura = new HashMap <ESTADOS, Boolean> ();
-	
-	/* Contenedor de constantes para identificar los estados */
-//	public static enum ESTADOS {
-//		// UBICACIÓN POS INTERES (IZQDA, CENTRO, DERECHA) , DISTANCIA (MUY CERCA, CERCA, LEJOS, MUY LEJOS), VELOCIDAD DE APROXIMACIÓN(BAJA, MEDIA, ALTA), SENTIDO(POS, NEG), HUECO(IZQDA, CENTRO, DERECHA)
-//		IZQDA_MUYCERCA_BAJADCHA(0), 
-//		IZQDA_MUYCERCA_ALTADCHA(0),
-//		IZQDA_MUYCERCA_MEDIADCHA(0),
-//		ATRAPADO_IZQDA(0),
-//		ATRAPADO_DCHA(0),
-//		ATRAPADO_MEDIO(0),
-//		ATRAPADO_IZQDA_CERCA(0),
-//		ATRAPADO_DCHA_CERCA(0),
-//		CONSIGUE_PUNTOS(0),
-//		NO_CONSIGUE_PUNTOS(0),
-//		HUECO_DCHA(0),
-//		HUECO_IZQDA(0),
-//		HUECO_MEDIO(0),
-//		NIL(0);
 
-		
-		private int contador; //Cuenta cada vez que se percibe ese estado
-		
-//		ESTADOS(int c) { this.contador = c; }
-		
-//		ESTADOS(){	this.contador = 0; }
-		
-		public void incrementa() { this.contador++; }
-		
-		public int getContador(){ return this.contador;}
-		
-		// Devuelve el enum ESTADOS al que se corresponde la cadena pasada por parametro
-//		public static ESTADOS buscaEstado(String nombreEstado)
-//		{
-//			for(ESTADOS s : ESTADOS.values()) {
-//				if(s.toString().equals(nombreEstado))
-//					return s;
-//			}
-//			
-//			return null;
-//		}
-//	}
-	
-//	public static enum ACCIONES
-//	{
-//		NIL,		//No cambia el parámetro desplazamiento
-//		DESP_IZQDA,	//Ajusta el desplazamiento al valor minimo
-//		DESP_DCHA,	//Ajusta el desplazamiento al valor máximmo
-//		DESP_MEDIO,	//Valor intermedio
-//		DESP_ALEATORIO	//Valor aleatorio
-//	}
-//	
 	// Acciones posibles
 	public static final ACTIONS[] ACCIONES = {ACTIONS.ACTION_LEFT, ACTIONS.ACTION_RIGHT, ACTIONS.ACTION_NIL};
 	
@@ -180,34 +135,39 @@ public class StateManager {
 // ---------------------------------------------------------------------
 //  					METODOS TABLAS APRENDIZAJE
 // ---------------------------------------------------------------------
-	static double getR(String estado, StateObservation obs)
+	static double getR(String estado)
 	{
 		double recompensa = 0;
-		double difDistancia = distanciaAnterior - distancia;
-		if(verbose) System.out.println(distanciaAnterior + " - " + distancia +" = "+ difDistancia);
-
-		if(obs.getAvatarHealthPoints() < obsAnterior.getAvatarHealthPoints() &&
-				estado.charAt(2) <= '3') {
+		
+		double incDistancia = distancia - distanciaAnterior;
+		double incVelocidad = velocidad - velocidadAnterior;
+		int incVida = vida - vidaAnterior;
+		
+		if(verbose) System.out.println("INC DISTANCIA: "+ distancia+ " - " +  +distanciaAnterior +"= "+ incDistancia);
+		if(verbose) System.out.println("INC VELOCIDAD: "+ velocidad+ " - " +  +velocidadAnterior +"= "+ incVelocidad);
+		if(verbose) System.out.println("INC VIDA: "+ vida+ " - " +  +vidaAnterior +"= "+ incVida);
+		
+		if(incVida < 0 && estado.charAt(2) <= '3') {
 			if(verbose)System.out.println("-300: PIERDE VIDA ESTADO CERCA");
 			recompensa -= 300;
 		}
 				
 		
-		if(estadoAnterior.charAt(2) >='3' && distanciaAnterior > distancia) { //Si se ha acercado a la bola
+		if(estado.charAt(2) >='3' && incDistancia < 0) { //Si se ha acercado a la bola estando lejos
 			if(verbose)System.out.println("+75: se ha acercado a la bola");
 			recompensa += 75;
 			
 		}
-		else if(distanciaAnterior > distancia) { //Si se ha acercado a la bola
-			if(verbose)System.out.println("+20: se ha acercado a la bola");
-			recompensa += 20;
+		else if(incDistancia < 0) { //Si se ha acercado a la bola estando cerca
+			if(verbose)System.out.println("+50: se ha acercado a la bola");
+			recompensa += 50;
 			
 		}
 		
-//		if(estado.charAt(2) <= '3' && estado.charAt(3) < estadoAnterior.charAt(3)) { // Si ha reducido la velocidad a poca distancia
-//			recompensa += 50;
-//			if(verbose)System.out.println("+50: poca distancia y ha reducido velocidad");
-//		}
+		if(estado.charAt(2) < '3' && incVelocidad < 0) { // Si ha reducido la velocidad a poca distancia
+			recompensa += 35;
+			if(verbose)System.out.println("+35: poca distancia y ha reducido velocidad");
+		}
 		
 //		//Si se ha alejado de la bola CASTIGO
 //		if(estadoAnterior.charAt(2) >='3' && distancia > distanciaAnterior) { 
@@ -226,17 +186,17 @@ public class StateManager {
 //			if(verbose)System.out.println("-100: ha dejado de estar en la zona de golpeo");
 //		}
 		//Si sigue estando en la zona de golpeo: PREMIO
-		if(estadoAnterior.charAt(0) == '1' && estado.charAt(0) == '1') {
+		if(estado.charAt(0) == '1' && Math.abs(incDistancia) <= 10 ) {
 			recompensa += 50;
 			if(verbose)System.out.println("+50: sigue estando en la zona de golpeo");
 		}
 		//Si ha entrado en la zona de golpeo: PREMIO
-		else if(estadoAnterior.charAt(0) != '1' && estado.charAt(0) == '1') {
-			recompensa += 200;
-			if(verbose)System.out.println("+200: ha entrado en la zona de golpeo");
-		}
+//		else if(estado.charAt(0) == '1' && Math.abs(incDistancia) <= 10) {
+//			recompensa += 200;
+//			if(verbose)System.out.println("+200: ha entrado en la zona de golpeo");
+//		}
 		
-//		// Estar lejos y parado
+		// Estar lejos y parado
 		if(estado.charAt(2) >= '5' && estado.charAt(3) == '0') {
 			recompensa -= 100;
 			if(verbose)System.out.println("-100: esta lejos y parado");
@@ -244,32 +204,41 @@ public class StateManager {
 		
 		// Lejos y empezar a moverse hacia la pelota
 	
-		if(estado.charAt(2) >= '3' && estadoAnterior.charAt(3)=='0' && estado.charAt(3) == '1' && 
+		if(estado.charAt(2) > '3' && Math.round(Math.abs(incVelocidad)) == 5.0 && estado.charAt(3) == '1' && 
 				(estado.charAt(4)=='1' && estado.charAt(0)=='2' || estado.charAt(4)=='0' && estado.charAt(0)=='0')) {
 			recompensa += 50;
 			if(verbose)System.out.println("+50: estaba lejos y ha empezado a moverse hacia el objetivo");
 		}
 		
 		// Lejos y empezar a moverse en contra de la pelota
-		else if(estado.charAt(2) >= '3' && estadoAnterior.charAt(3)=='0' && estado.charAt(3) == '1' && 
+		else if(estado.charAt(2) >= '3' && Math.round(Math.abs(incVelocidad)) == 5.0 && estado.charAt(3) == '1' && 
 			(estado.charAt(4)=='1' && estado.charAt(0)=='0' || estado.charAt(4)=='0' && estado.charAt(0)=='2')) {
-		recompensa -= 50;
-		if(verbose)System.out.println("-50: estaba lejos y ha empezado a moverse en contra del objetivo");
+		recompensa -= 100;
+		if(verbose)System.out.println("-50: estaba lejos y ha empezado a moverse en contra del objetivo" + Math.round(Math.abs(incVelocidad)));
 		}
 		
 		// Lejos y aumenta velocidad hacia la pelota
 		else if(estado.charAt(2) >= '3' && (
-				(getVelocidadJugador(obs) > getVelocidadJugador(obsAnterior) && estado.charAt(0)=='2') ||
-				(getVelocidadJugador(obs) < getVelocidadJugador(obsAnterior) && estado.charAt(0)=='0'))) {
-			recompensa += 100;
-			if(verbose)System.out.println("+50: aumenta velocidad hacia objetivo ("+getVelocidadJugador(obsAnterior)+"-"+getVelocidadJugador(obs)+")");
+				(incVelocidad > 0 && estado.charAt(0)=='2') ||
+				(incVelocidad < 0 && estado.charAt(0)=='0'))) {
+			
+			if(Math.abs(incVelocidad) > 3 && estado.charAt(2) >= '4') {
+				recompensa += 100;
+				if(verbose)System.out.println("+100: aumenta mucho velocidad estando lejos hacia objetivo ("+incVelocidad+")");
+			}
+			else if(incDistancia < 0)
+			{
+				recompensa += 50;
+				if(verbose)System.out.println("+50: aumenta velocidad hacia objetivo ("+incVelocidad+")");
+			}
+			
 		}
 		// Lejos y aumenta velocidad en contra de la pelota
 		else if(estado.charAt(2) >= '3' && (
-				(getVelocidadJugador(obs) < getVelocidadJugador(obsAnterior) && estado.charAt(0)=='2') ||
-				(getVelocidadJugador(obs) > getVelocidadJugador(obsAnterior) && estado.charAt(0)=='0'))) {
+				(incVelocidad < 0 && estado.charAt(0)=='2') ||
+				(incVelocidad > 0 && estado.charAt(0)=='0'))) {
 			recompensa -= 100;
-			if(verbose)System.out.println("-100: aumenta velocidad en contra del objetivo ("+getVelocidadJugador(obsAnterior)+"-"+getVelocidadJugador(obs)+")");
+			if(verbose)System.out.println("-100: aumenta velocidad en contra del objetivo "+incVelocidad+")");
 		}
 		
 		if(estado.charAt(0) == '1') // Pelota dentro margen de la plataforma
@@ -281,10 +250,10 @@ public class StateManager {
 		
 		if(estado.charAt(2) == '0') { // Va a golpear con parte izqda
 			if(estado.charAt(1) == '0') { // Hueco izqda
-				recompensa += 75;
+				recompensa += 150;
 				if(verbose)System.out.println("+75: muy cerca izqda y hueco izqda");
 				
-				if(estadoAnterior.charAt(2) == '0' && estadoAnterior.charAt(1) == '0') {
+				if(Math.abs(incDistancia) <= 10) {
 					recompensa += 100; 
 					if(verbose)System.out.println("+100: sigue estando muy cerca izqda y hueco izqda");
 				}
@@ -300,19 +269,20 @@ public class StateManager {
 //			}
 		
 		}
-		else if(estado.charAt(2) == '1') { // Va a golpear con parte centro
+		else if(estado.charAt(2) == '1')  // Va a golpear con parte centro
 //			if(estado.charAt(1) == '0') { // Hueco izqda
 //				recompensa += 25;
 //				if(verbose)System.out.println("+25: muy cerca centro y hueco izqda");
 //			}
 			if(estado.charAt(1) == '1') { // Hueco medio
-				recompensa += 75;
+				recompensa += 150;
 				if(verbose)System.out.println("+75: muy cerca centro y hueco centro");
 				
-				if(estadoAnterior.charAt(2) == '1' && estadoAnterior.charAt(1) == '1') {
+				if(Math.abs(incDistancia) <= 10) {
 					recompensa += 100;
 					if(verbose)System.out.println("+100: sigue estando muy cerca centro y hueco centro");
 				}
+			
 //			}
 //			else {
 //				recompensa += 25; //Hueco dcha
@@ -330,17 +300,18 @@ public class StateManager {
 //				if(verbose)System.out.println("+25: muy cerca dcha y hueco centro");
 //			}
 			if(estado.charAt(1) == '2') {
-				recompensa += 75; //Hueco dcha
+				recompensa += 150; //Hueco dcha
 				if(verbose)System.out.println("+75: muy cerca dcha y hueco dcha");
 				
-				if(estadoAnterior.charAt(2) == '2' && estadoAnterior.charAt(1) == '2') {
+				if(Math.abs(incDistancia) <= 10) {
 					recompensa += 100; //Hueco dcha
 					if(verbose)System.out.println("+100: sigue estando muy cerca dcha y hueco dcha");
 				}
 			}
 			
+			
 		
-		}
+		
 
 		
 //		//Distancia cerca y velocidad de aproximación media
@@ -367,6 +338,12 @@ public class StateManager {
 //			if(verbose)System.out.println("+30: distancia cerca y velocidad baja");
 //		}
 		
+		// Reducir velocidad y distancia estando cerca: efecto secundario, le da mucho con los extremos
+		if(estado.charAt(2) <= '2' && incVelocidad < 0 && incDistancia < 0)
+		{
+			recompensa += 75;
+			if(verbose)System.out.println("+75: distancia  cerca y reduce velocidad y distancia");
+		}
 		//Distancia muy cerca  y velocidad baja: PREMIO
 		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '1') {
 			recompensa += 50;
@@ -379,6 +356,7 @@ public class StateManager {
 			if(verbose)System.out.println("+100: distancia muy cerca y velocidad muy baja");
 		}
 		
+
 		
 		
 		return recompensa;
@@ -751,6 +729,8 @@ public class StateManager {
 		double[] celdaPosActual = getCeldaPreciso(posActual, obs.getWorldDimension());
 		
 		double velocidadJugador = obs.getAvatarOrientation().x*obs.getAvatarSpeed();
+		StateManager.velocidadAnterior = velocidadJugador;
+		StateManager.vidaAnterior = obs.getAvatarHealthPoints();
 		//double aceleracion = velocidadJugador - velocidadAnterior;
 		//velocidadAnterior = velocidadJugador;
 		
