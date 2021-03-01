@@ -86,62 +86,6 @@ public class StatePredict {
 		
 	}
 
-	/*
-	public ACTIONS getMovimiento(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
-	{
-		Vector2d posActual = obs.getAvatarPosition();
-
-		//posActual = getIndiceMapa(pos);
-		Vector2d posBola = StateManager.getPosBolaReal(obs);
-		double[] celdaPosBola = StateManager.getCeldaPreciso(posBola, obs.getWorldDimension());
-		double[] celdaPosBolaAnterior = StateManager.getCeldaPreciso(posBolaAnterior, obs.getWorldDimension());
-		double[] celdaPosActual = StateManager.getCeldaPreciso(posActual, obs.getWorldDimension());
-		
-		double velocidadJugador = obs.getAvatarOrientation().x*obs.getAvatarSpeed();
-		//double aceleracion = velocidadJugador - velocidadAnterior;
-		//velocidadAnterior = velocidadJugador;
-		
-		ACTIONS ultimaAccion = obs.getAvatarLastAction();
-		
-		golpeaMuro(posBola, posBolaAnterior);
-		
-		//if(huecos.size() > 0) desplazamiento = getDesplazamientoDir(getDirHueco(mapaObstaculos));
-		
-		
-		
-		//if(Math.abs(pendienteAnterior) >= 1)
-		//	desplazamiento = 0;
-			
-
-		posActual.x += this.desplazamiento; // 0 - 70
-		
-		
-		// Si hay bola
-		if(StateManager.hayBola(obs))
-		{
-			double distanciaBola = Math.sqrt(posActual.sqDist(posBola));
-			
-			if(StateManager.estaBajandoBola(celdaPosBola, celdaPosBolaAnterior) && distanciaBola > 30)
-			{
-				
-				double ColSueloBola = StateManager.getColPredict(obs, posBolaAnterior);
-				
-				
-				return StateManager.getMovimientoTrayectoriaBola(posActual,ColSueloBola, velocidadJugador, ultimaAccion);
-			}
-			else //Bola sube
-			{
-				
-				return StateManager.getMovimientoBola(obs);
-			}
-					
-		}
-		else
-			return ACTIONS.ACTION_USE;
-			
-	}
-
-	
 	
 	/*
 	 * Actualiza la variable posReboteLadrillo con la direccion donde la bola cambió de dirección por última vez

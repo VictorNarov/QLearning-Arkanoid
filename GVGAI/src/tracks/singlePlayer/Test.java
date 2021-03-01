@@ -9,7 +9,7 @@ import java.util.Random;
 import ontology.Types.ACTIONS;
 import qlearning.Grafica;
 import qlearning.StateManager;
-
+import qlearning.TrainingAgent;
 import tools.Utils;
 import tracks.ArcadeMachine;
 
@@ -21,8 +21,8 @@ public class Test {
     	String QLearningTesting = "qlearning.TestingAgent";
 
     	double maxPuntuacionJuego[] = new double[] {110, 62, 98, 76, 50, 72, 62, 50, 140, 50, 16};
-    	int nivelesTraining[] = new int[] {0, 1,2,3,4};
-    	int nivelesTest[] = new int[] {5,2,4};
+    	int nivelesTraining[] = new int[] {0,1,3,2};
+    	int nivelesTest[] = new int[] {5,2,4,6,7};
 
 		//Load available games
 		String spGamesCollection =  "examples/all_games_sp.csv";
@@ -44,7 +44,7 @@ public class Test {
 		String recordActionsFile = null;// "actions_" + games[gameIdx] + "_lvl"
 	
 		
-		int levelIdx = 4; // level names from 0 to 4 (game_lvlN.txt).
+		int levelIdx = 2; // level names from 0 to 4 (game_lvlN.txt).
 		String level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
 		StateManager stateManager;
 		
@@ -60,12 +60,12 @@ public class Test {
 		
 		if(training)	// Crea la tabla Q a random y juega partidas con acciones aleatorias
 		{
-			visuals = false;
+			visuals = true;
 			boolean testingAfterTraining = true; // Probar todos los niveles despues del entrenamiento
 			boolean randomTablaQ = true; // Verdadero: crea la tabla Q con valores random, si no, a cero
 			boolean guardarGrafica = true; // Si queremos guardar una imagen de la grafica Ticks/epoca
 			stateManager = new StateManager(randomTablaQ,false);
-			StateManager.numIteraciones = 3000; // Numero de partidas a jugar
+			StateManager.numIteraciones = 100; // Numero de partidas a jugar
 
 			/*
 			 * Grafica Aprendizaje Resultado Score / Epoca
@@ -91,15 +91,18 @@ public class Test {
 			for (StateManager.iteracionActual = 1; StateManager.iteracionActual <= StateManager.numIteraciones; StateManager.iteracionActual++) {
 				levelIdx = nivelesTraining[new Random().nextInt(nivelesTraining.length)]; // level names from 0 to 4 (game_lvlN.txt).
 				level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
+				
+				visuals = false; TrainingAgent.forzarMaxQ = false; //StateManager.verbose = false;
+				if(StateManager.iteracionActual % 25 == 0) { // Mostrar cada 25% partidas
+					visuals = true;
+					TrainingAgent.forzarMaxQ = true;
+					StateManager.verbose = true;
+					levelIdx = 4; // level names from 0 to 4 (game_lvlN.txt).
+					level1 = game.replace(gameName, gameName + "_lvl" + levelIdx);
+				}
+				
 				System.out.println("\t\t\t\t\t\t\t\t\t\tIteración " + StateManager.iteracionActual + " / "+ StateManager.numIteraciones);
 				System.out.println("\t\t\t\t\t\t\t\t\t\tlevel: " + levelIdx);
-				
-//				visuals = false; StateManager.verbose = false;
-//				if(StateManager.iteracionActual % 250 == 0) { // Mostrar cada 250 partidas
-//					politica MaxQ
-//					visuals = true;
-//					StateManager.verbose = true;
-//				}
 				
 				double puntuacion = ArcadeMachine.runOneGame(game, level1, visuals, QLearningTraining, recordActionsFile, seed, 0)[1];
 				double aciertoPartida = Math.round(puntuacion / maxPuntuacionJuego[levelIdx] *100);
@@ -124,7 +127,7 @@ public class Test {
 				graficaScore.ylim(1, 100);
 				graficaScore.xlabel("Epoca de Training");                  
 				graficaScore.ylabel("Resultado % Score Partida");                 
-				graficaScore.saveas(nombreFich, 640, 480);
+				graficaScore.saveas(nombreFich, 1280, 720);
 				
 				File file = new File( nombreFich );
 				try {

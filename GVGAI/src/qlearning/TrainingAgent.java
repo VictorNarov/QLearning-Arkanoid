@@ -19,11 +19,12 @@ public class TrainingAgent extends AbstractPlayer {
 	boolean verbose = StateManager.verbose;
 	
 	/* Parametros del Aprendizaje */
-	private double alpha = 0.3; // Factor Exploracion tamaño del paso
-	private double gamma = 0.2; // Factor descuento recompensa futura
+	private double alpha = 0.3; // Factor Exploracion tamaño del paso 0.3
+	private double gamma = 0.2; // Factor descuento recompensa futura 0.2
 
 	
 	boolean randomPolicy=true; // RandomPolicy o MaxQ
+	public static boolean forzarMaxQ = false;
 	
 	/* Variables */
 	ArrayList<Observation>[] inmov;
@@ -77,7 +78,7 @@ public class TrainingAgent extends AbstractPlayer {
     	// A medida que transcurre el entrenamiento, aumenta epsilon
     	double epsilon = (double)StateManager.iteracionActual / (double)StateManager.numIteraciones;
 
-    	if(new Random().nextDouble() > epsilon) { // 
+    	if(!forzarMaxQ && new Random().nextDouble() > epsilon) { // 
     		randomPolicy = true; // Exploración: más probable al principio del entrenamiento
     		System.out.println("Epsilon = " + epsilon + "\nAcción: random");
     		}
@@ -108,8 +109,8 @@ public class TrainingAgent extends AbstractPlayer {
     	if(!StateManager.hayBola(stateObs))
     		return ACTIONS.ACTION_USE;
     	
-		if(StateManager.contadorNIL >= 300)
-			return ACTIONS.ACTION_ESCAPE;
+//		if(StateManager.contadorNIL >= 300)
+//			return ACTIONS.ACTION_ESCAPE;
 		
     	
     	double[] pos = StateManager.getCeldaPreciso(stateObs.getAvatarPosition(),dim);
@@ -171,13 +172,13 @@ public class TrainingAgent extends AbstractPlayer {
     	
     	// Criterio de selección: random
     	if(randomPolicy) {
-	    	
+    		if(verbose) System.out.println("Elige acción aleatoria");
 	        int index = randomGenerator.nextInt(numAccionesPosibles);
 	        action = StateManager.ACCIONES[index];
     	}
     	else // Criterio seleccion: maxQ
     	{
-    		
+    		if(verbose) System.out.println("Elige mejor acción");
     		action = StateManager.getAccionMaxQ(estadoActual);
     	}
 
@@ -219,13 +220,18 @@ public class TrainingAgent extends AbstractPlayer {
 //				e.printStackTrace();
 //			}
 		
-		
-        StateManager.estadoAnterior = estadoActual;
+		if(forzarMaxQ)
+		{
+		int puntoInterrupcion;
+		puntoInterrupcion=0;
+		}
+        
+		StateManager.estadoAnterior = estadoActual;
 		posBolaAnterior = posBolaActual;
 		
 
 		
-        return action;
+         return action;
     }
 	
 
