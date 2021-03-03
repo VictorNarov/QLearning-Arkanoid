@@ -830,25 +830,22 @@ public class StateManager {
 		
 		
 
-////		//Dígito 5: MISMA PENDIENTE GOLPEO ANTERIOR
-		double pendienteActual = getPendienteBola(posBolaAnterior, posBola);
-		if(verbose) System.out.println("mAnterior = "+pendienteAnterior +" ; mActual = " + pendienteActual + " ; contadorNIL = " + contadorNIL);
+ //Dígito 5: ATASCADO
+		
 		
 		if(golpeaBola(posBola, posBolaAnterior)){
 							
 				if(contadorNIL >= 100) // Mas de 200 ticks sin puntos
 				{
 					estado.setCharAt(5,'1'); // Golpea sin conseguir puntos
-					//pendientesMalas.add(pendienteActual);
+
 				}
 				else if(contadorNIL == 0) { // Ha conseguido puntos
-					//pendientesMalas.clear();
+
 					estado.setCharAt(5,'2'); 
 				}
 				else
 					estado.setCharAt(5,'0'); 
-				
-				pendienteAnterior = pendienteActual;	
 		}
 		else
 			estado.setCharAt(5,'0'); 

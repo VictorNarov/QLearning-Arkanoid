@@ -86,26 +86,20 @@ public class StatePredict {
 		else
 			estado.setCharAt(4,'0'); // Se mueve izqda
 
-
-////		//Dígito 5: MISMA PENDIENTE GOLPEO ANTERIOR
-		double pendienteActual = StateManager.getPendienteBola(posBolaAnterior, posBola);
-		double[] celdaPosBola =  StateManager.getCeldaPreciso(posBola, obs.getWorldDimension());
-		double[] celdaPosBolaAnterior =  StateManager.getCeldaPreciso(posBolaAnterior, obs.getWorldDimension());
-		
+		//Dígito 5: atascado
 		if(StateManager.golpeaBola(posBola, posBolaAnterior)){
 			
 			if(StateManager.contadorNIL >= 100) // Mas de 200 ticks sin puntos
 			{
 				estado.setCharAt(5,'1'); // Golpea sin conseguir puntos
-				//pendientesMalas.add(pendienteActual);
+
 			}
 			else if(StateManager.contadorNIL == 0) { // Ha conseguido puntos
-				//pendientesMalas.clear();
 				estado.setCharAt(5,'2'); 
 			}			
 		}
 		else
-			estado.setCharAt(5,'0'); 
+			estado.setCharAt(5,'0');  //No está golpeando la bola
 			return estado.toString();
 		
 	}
