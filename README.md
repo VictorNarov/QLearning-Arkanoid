@@ -11,7 +11,7 @@ QLearning algorithm of Reinforcement Learning implemented in the GVGAI platform 
 `GVGAI/src/tracks/singlePlayer/Test.java`
 
 ## Explanation video (spanish)
-[![IMAGE ALT TEXT HERE](https://i.gyazo.com/0ab8c8e4b5a58f93bdb064d58e1d03e1.jpg)](https://www.youtube.com/watch?v=Dsuh_rQo7NI)
+[![IMAGE ALT TEXT HERE](https://i.gyazo.com/0ab8c8e4b5a58f93bdb064d58e1d03e1.jpg)](https://youtu.be/BjhRDMIIYUI)
 
 
 ## References
