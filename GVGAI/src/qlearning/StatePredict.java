@@ -28,7 +28,7 @@ public class StatePredict {
 
 	public String getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
-		StringBuilder estado = new StringBuilder(new String(new char[5]).replace("\0", "9")); //Inicializamos a todo 9
+		StringBuilder estado = new StringBuilder(new String(new char[6]).replace("\0", "9")); //Inicializamos a todo 9
 		
 
 		posActual = obs.getAvatarPosition();
@@ -59,6 +59,9 @@ public class StatePredict {
 			//Obtenemos la posicion de la trayectoria y la distancia a la posicion predicha
 			char posDistTrayectoriaBolaTrayectoriaBola[] = this.getEstadoTrayectoriaDistanciaBola(posActual, ColSueloBola);
 			
+//			if(posDistTrayectoriaBolaTrayectoriaBola[1] <= '2' && posActual.y - posBola.y > 100)
+//				posDistTrayectoriaBolaTrayectoriaBola[1] = '3'; // Si no está a punto de darle		
+			
 			estado.setCharAt(0, posDistTrayectoriaBolaTrayectoriaBola[0]);
 			estado.setCharAt(2, posDistTrayectoriaBolaTrayectoriaBola[1]);
 		}
@@ -84,7 +87,26 @@ public class StatePredict {
 			estado.setCharAt(4,'0'); // Se mueve izqda
 
 
-		return estado.toString();
+////		//Dígito 5: MISMA PENDIENTE GOLPEO ANTERIOR
+		double pendienteActual = StateManager.getPendienteBola(posBolaAnterior, posBola);
+		double[] celdaPosBola =  StateManager.getCeldaPreciso(posBola, obs.getWorldDimension());
+		double[] celdaPosBolaAnterior =  StateManager.getCeldaPreciso(posBolaAnterior, obs.getWorldDimension());
+		
+		if(StateManager.golpeaBola(posBola, posBolaAnterior)){
+			
+			if(StateManager.contadorNIL >= 100) // Mas de 200 ticks sin puntos
+			{
+				estado.setCharAt(5,'1'); // Golpea sin conseguir puntos
+				//pendientesMalas.add(pendienteActual);
+			}
+			else if(StateManager.contadorNIL == 0) { // Ha conseguido puntos
+				//pendientesMalas.clear();
+				estado.setCharAt(5,'2'); 
+			}			
+		}
+		else
+			estado.setCharAt(5,'0'); 
+			return estado.toString();
 		
 	}
 

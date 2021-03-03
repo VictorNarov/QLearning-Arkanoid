@@ -20,7 +20,7 @@ public class TrainingAgent extends AbstractPlayer {
 	
 	/* Parametros del Aprendizaje */
 	private double alpha = 0.1; // Factor Exploracion tamaño del paso 0.3
-	private double gamma = 0.7; // Factor descuento recompensa futura 0.2
+	private double gamma = 0.5; // Factor descuento recompensa futura 0.2
 
 	
 	boolean randomPolicy=true; // RandomPolicy o MaxQ

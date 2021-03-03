@@ -42,6 +42,8 @@ public class StateManager {
 	static double distancia = 0;
 	static double velocidad = 0;
 	static int vida = 0;
+	
+	static HashSet<Double> pendientesMalas = new HashSet<Double>();
 
 	
 	//public static int numObjetivos;
@@ -71,11 +73,12 @@ public class StateManager {
 	// Variables prediccion trayectoria
 	private static double desplazamiento = 35;
 	static double scoreAnterior = 0;
-	static double pendienteAnterior;
+	static double pendienteAnterior  = Double.NEGATIVE_INFINITY;
 	static int numVecesSinPuntos = 0;
 	static DIRECCIONES posReboteLadrillo=DIRECCIONES.MEDIO;
 	private static boolean primeraVez = true;
 	static ArrayList<Integer> huecos;
+	
 	
 	public StateManager(boolean randomTablaQ, boolean verbose) {
 		if(verbose) System.out.println("Inicializando tablas Q y R.....");
@@ -269,7 +272,7 @@ public class StateManager {
 //			}
 		
 		}
-		else if(estado.charAt(2) == '1')  // Va a golpear con parte centro
+		else if(estado.charAt(2) == '1') {  // Va a golpear con parte centro
 //			if(estado.charAt(1) == '0') { // Hueco izqda
 //				recompensa += 25;
 //				if(verbose)System.out.println("+25: muy cerca centro y hueco izqda");
@@ -289,8 +292,9 @@ public class StateManager {
 //				if(verbose)System.out.println("+25: muy cerca centro y hueco dcha");
 //			}
 		
+			}
 		}
-		else if(estado.charAt(2) == '2')  // Va a golpear con parte derecha
+		else if(estado.charAt(2) == '2') {  // Va a golpear con parte derecha
 //			if(estado.charAt(1) == '0') { // Hueco izqda
 //				recompensa += 20;
 //				if(verbose)System.out.println("+20: muy cerca dcha y hueco izqda");
@@ -309,7 +313,7 @@ public class StateManager {
 				}
 			}
 			
-			
+		}
 		
 		
 
@@ -338,31 +342,43 @@ public class StateManager {
 //			if(verbose)System.out.println("+30: distancia cerca y velocidad baja");
 //		}
 		
-		// Reducir velocidad y distancia estando cerca: efecto secundario, le da mucho con los extremos
-		if(estado.charAt(2) <= '2' && incVelocidad < 0 && incDistancia < 0)
-		{
-			recompensa += 75;
-			if(verbose)System.out.println("+75: distancia  cerca y reduce velocidad y distancia");
-		}
-		//Distancia muy cerca  y velocidad baja: PREMIO
-		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '1') {
-			recompensa += 50;
-			if(verbose)System.out.println("+50: distancia muy cerca y velocidad baja");
-		}
-		
-		//Distancia muy cerca  y velocidad muy baja: PREMIO+
-		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '0') {
-			recompensa += 100;
-			if(verbose)System.out.println("+100: distancia muy cerca y velocidad muy baja");
-		}
-		
+//		// Reducir velocidad y distancia estando cerca: efecto secundario, le da mucho con los extremos
+//		if(estado.charAt(2) <= '2' && incVelocidad < 0 && incDistancia < 0)
+//		{
+//			recompensa += 75;
+//			if(verbose)System.out.println("+75: distancia  cerca y reduce velocidad y distancia");
+//		}
+//		//Distancia muy cerca  y velocidad baja: PREMIO
+//		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '1') {
+//			recompensa += 50;
+//			if(verbose)System.out.println("+50: distancia muy cerca y velocidad baja");
+//		}
+//		
+//		//Distancia muy cerca  y velocidad muy baja: PREMIO+
+//		else if(estado.charAt(2) <= '2' && estado.charAt(3) == '0') {
+//			recompensa += 100;
+//			if(verbose)System.out.println("+100: distancia muy cerca y velocidad muy baja");
+//		}
+//		
 
+		if(estado.charAt(5) == '1') {
+			recompensa -= 250;
+			if(verbose)System.out.println("-250: no consigue puntos y sigue enviando la bola igual");
+		}
+		else if(estado.charAt(5) == '2') {
+			recompensa += 250;
+			if(verbose)System.out.println("+250: consigue puntos");
+		}
 		
 		
 		return recompensa;
 		
 
-	}
+	}	
+		
+		
+
+
 	
 	/*
 	 * Inializamos la TablaQ
@@ -711,7 +727,7 @@ public class StateManager {
 	
 	public static String getEstado(StateObservation obs, Vector2d posBolaAnterior, char[][] mapaObstaculos)
 	{
-		StringBuilder estado = new StringBuilder(new String(new char[5]).replace("\0", "9")); //Inicializamos a todo 9
+		StringBuilder estado = new StringBuilder(new String(new char[6]).replace("\0", "9")); //Inicializamos a todo 9
 				
 		if(primeraVez) { //Localiza los huecos en las filas de osbtauclos del mapa
 			 huecos = getHuecos(mapaObstaculos);
@@ -785,6 +801,9 @@ public class StateManager {
 			//Obtenemos la posicion de la trayectoria y la distancia a la posicion predicha
 			char posDistTrayectoriaBolaTrayectoriaBola[] = getEstadoTrayectoriaDistanciaBola(posActual, ColSueloBola);
 			
+//			if(posDistTrayectoriaBolaTrayectoriaBola[1] <= '2' && posActual.y - posBola.y > 100)
+//				posDistTrayectoriaBolaTrayectoriaBola[1] = '3'; // Si no está a punto de darle			
+			
 			estado.setCharAt(0, posDistTrayectoriaBolaTrayectoriaBola[0]);
 			estado.setCharAt(2, posDistTrayectoriaBolaTrayectoriaBola[1]);
 		}
@@ -811,6 +830,28 @@ public class StateManager {
 		
 		
 
+////		//Dígito 5: MISMA PENDIENTE GOLPEO ANTERIOR
+		double pendienteActual = getPendienteBola(posBolaAnterior, posBola);
+		if(verbose) System.out.println("mAnterior = "+pendienteAnterior +" ; mActual = " + pendienteActual + " ; contadorNIL = " + contadorNIL);
+		
+		if(golpeaBola(posBola, posBolaAnterior)){
+							
+				if(contadorNIL >= 100) // Mas de 200 ticks sin puntos
+				{
+					estado.setCharAt(5,'1'); // Golpea sin conseguir puntos
+					//pendientesMalas.add(pendienteActual);
+				}
+				else if(contadorNIL == 0) { // Ha conseguido puntos
+					//pendientesMalas.clear();
+					estado.setCharAt(5,'2'); 
+				}
+				else
+					estado.setCharAt(5,'0'); 
+				
+				pendienteAnterior = pendienteActual;	
+		}
+		else
+			estado.setCharAt(5,'0'); 
 		
 		String estadoPercibido = estado.toString();
 		//Incrementamos su contador
@@ -1203,6 +1244,7 @@ public class StateManager {
 		char disTrayectoriaBola;
 		
 		double distancia = colCorteBola - colJugador;
+	
 		StateManager.distanciaAnterior = Math.abs(distancia);
 		if(verbose)System.out.println("PREDICCIÓN BOLA: "+ colCorteBola +" ; JUGADOR: "+ colJugador + " ; DISTANCIA = " + distancia);
 		
