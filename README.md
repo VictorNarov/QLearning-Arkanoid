@@ -1,5 +1,5 @@
 # QLearning-Arkanoid 
-QLearning algorithm of Reinforcement Learning implemented in the GVGAI platform to solve the 80th game, called Roadfighter.
+QLearning algorithm of Reinforcement Learning implemented in the GVGAI platform to solve the 111st game, called Arkanoid.
 
 <p align="center">
 <img src="GVGAI/resources/arkanoid.gif" align="center" width="500" height="458"/>
